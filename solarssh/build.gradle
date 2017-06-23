@@ -1,0 +1,105 @@
+plugins {
+    id 'java'
+    id 'war'
+    id 'checkstyle'
+    id 'eclipse-wtp'
+}
+
+repositories {
+    jcenter()
+    maven {
+        url "https://data.solarnetwork.net/archive/repository/solarnetwork-stage/"
+    }
+}
+
+ext {
+	bouncyCastleVersion = '1.56'
+	jacksonVersion = '2.8.7'
+	springVersion = '4.3.9.RELEASE'
+	slf4jVersion = '1.7.25'
+}
+
+dependencies {
+	providedCompile 'javax.servlet:javax.servlet-api:3.1.0'	
+	providedCompile 'javax.websocket:javax.websocket-api:1.1'
+	
+	// JSON
+	compile "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+	compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+	compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+	compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
+	
+	// Logging
+	compile "org.slf4j:jul-to-slf4j:${slf4jVersion}"
+	compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
+	compile "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
+	compile 'ch.qos.logback:logback-classic:1.2.3'
+	
+	// Spring
+	compile "org.springframework:spring-webmvc:${springVersion}"
+	compile "org.springframework:spring-websocket:${springVersion}"
+	
+	// SolarNetwork
+	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
+	
+	// SSH
+    compile 'org.apache.sshd:sshd-core:1.4.0'
+    compile "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
+    compile "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
+    compile 'net.i2p.crypto:eddsa:0.1.0'
+    
+    // Testing
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.mockito:mockito-core:2.8.47'
+}
+
+configurations.compile {
+	exclude group: 'commons-logging'
+	exclude group: 'net.sf.supercsv'
+	exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
+	exclude group: 'org.osgi'
+	exclude group: 'org.springframework', module: 'spring-messaging'
+	exclude group: 'org.springframework', module: 'spring-tx'
+	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
+}
+
+version = '0.1'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+checkstyle {
+   toolVersion ="7.6.1" 
+}
+
+eclipse {
+	project {
+		natures 'net.sf.eclipsecs.core.CheckstyleNature'
+		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
+	}
+	wtp {
+		facet {
+			facet name: 'jst.java', version: 1.8
+			facet name: 'jst.web', version: '3.1'
+			facet name: 'jst.jaxrs', version: '2.0'
+		}
+	}
+}
+
+jar {
+    baseName = 'solarssh'
+    version =  version
+    manifest {
+        attributes 'Implementation-Title': 'SolarSSH App',
+                   'Implementation-Version': version
+    }
+}
+
+war {
+    baseName = 'solarssh'
+    version =  version
+    manifest {
+        attributes 'Implementation-Title': 'SolarSSH App',
+                   'Implementation-Version': version
+    }
+}
