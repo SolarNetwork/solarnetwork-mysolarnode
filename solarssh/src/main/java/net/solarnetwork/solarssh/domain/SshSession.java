@@ -44,6 +44,7 @@ public class SshSession {
   private final String sshHost;
   private final int sshPort;
   private final int reverseSshPort;
+  private final int reverseHttpPort;
 
   private boolean established;
   private Long startInstructionId;
@@ -65,9 +66,11 @@ public class SshSession {
    *        the SSH port for the node to connect to
    * @param reverseSshPort
    *        a reverse SSH port to use
+   * @param reverseHttpPort
+   *        a reverse HTTP port to use
    */
   public SshSession(long created, String id, Long nodeId, String sshHost, int sshPort,
-      int reverseSshPort) {
+      int reverseSshPort, int reverseHttpPort) {
     super();
     this.created = created;
     this.id = id;
@@ -75,6 +78,7 @@ public class SshSession {
     this.sshHost = sshHost;
     this.sshPort = sshPort;
     this.reverseSshPort = reverseSshPort;
+    this.reverseHttpPort = reverseHttpPort;
   }
 
   public boolean isEstablished() {
@@ -111,6 +115,11 @@ public class SshSession {
   @JsonProperty("port")
   public int getSshPort() {
     return sshPort;
+  }
+
+  @JsonIgnore
+  public int getReverseHttpPort() {
+    return reverseHttpPort;
   }
 
   @Override

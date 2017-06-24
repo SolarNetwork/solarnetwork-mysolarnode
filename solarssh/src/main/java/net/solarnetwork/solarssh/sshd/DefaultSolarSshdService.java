@@ -30,12 +30,9 @@ import java.util.Collections;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
-import org.apache.sshd.common.util.net.SshdSocketAddress;
 import org.apache.sshd.common.util.security.SecurityUtils;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.pubkey.CachingPublicKeyAuthenticator;
-import org.apache.sshd.server.forward.ForwardingFilter;
-import org.apache.sshd.server.forward.RejectAllForwardingFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -77,22 +74,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdService.class);
 
   /**
-   * {@link ForwardingFilter} that allows only listening on the loopback host using the
-   * {@link SshSession#getReverseSshPort()} configured with the connection.
-   */
-  private class SshSessionForwardFilter extends RejectAllForwardingFilter {
-
-    @Override
-    public boolean canListen(SshdSocketAddress address, Session session) {
-      String sessionId = session.getUsername();
-      SshSession sess = sessionDao.findOne(sessionId);
-      return (sess != null && SshdSocketAddress.isLoopback(address.getHostName())
-          && address.getPort() == sess.getReverseSshPort());
-    }
-
-  }
-
-  /**
    * Start the server.
    */
   public synchronized void start() {
@@ -123,7 +104,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     s.setPublickeyAuthenticator(
         new CachingPublicKeyAuthenticator(new SolarSshPublicKeyAuthenticator(sessionDao)));
 
-    s.setTcpipForwardingFilter(new SshSessionForwardFilter());
+    s.setTcpipForwardingFilter(new SshSessionForwardFilter(sessionDao));
 
     s.addSessionListener(this);
 

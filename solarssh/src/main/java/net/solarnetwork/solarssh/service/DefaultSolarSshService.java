@@ -115,18 +115,23 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     String sessionId = UUID.randomUUID().toString();
     Set<Integer> usedPorts = portSessionMap.keySet();
 
-    for (int rport = minPort; rport < maxPort; rport++) {
+    for (int rport = minPort; rport < maxPort; rport += 2) {
       if (usedPorts.contains(rport)) {
         continue;
       }
       try (ServerSocket socket = new ServerSocket(rport)) {
         socket.setReuseAddress(true);
-        SshSession sess = new SshSession(System.currentTimeMillis(), sessionId, nodeId, host, port,
-            rport);
-        if (portSessionMap.putIfAbsent(rport, sess) == null) {
-          sessionMap.put(sessionId, sess);
-          log.info("SshSession {} created: node {}, rport {}", sessionId, nodeId, rport);
-          return sess;
+        try (ServerSocket httpSocket = new ServerSocket(rport + 1)) {
+          httpSocket.setReuseAddress(true);
+          SshSession sess = new SshSession(System.currentTimeMillis(), sessionId, nodeId, host,
+              port, rport, rport + 1);
+          if (portSessionMap.putIfAbsent(rport, sess) == null) {
+            sessionMap.put(sessionId, sess);
+            log.info("SshSession {} created: node {}, rport {}", sessionId, nodeId, rport);
+            return sess;
+          }
+        } catch (SocketException e) {
+          // ignore this one
         }
       } catch (SocketException e) {
         // ignore this one
