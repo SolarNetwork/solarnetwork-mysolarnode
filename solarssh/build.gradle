@@ -48,6 +48,9 @@ dependencies {
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
     compile 'net.i2p.crypto:eddsa:0.1.0'
     
+    // HTTP
+    compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
+    
     // Testing
     testCompile 'junit:junit:4.12'
     testCompile 'org.mockito:mockito-core:2.8.47'

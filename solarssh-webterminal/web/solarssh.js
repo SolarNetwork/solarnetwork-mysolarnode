@@ -37,6 +37,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var session;
 	var socket;
 	var socketState = 0;
+	var setupGuiWindow;
 
 	function hostURL() {
 		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost);
@@ -50,8 +51,19 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		return ('ws' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost +config.solarSshPath +'/ssh');
 	}
 
+	function setupGuiURL() {
+		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost +config.solarSshPath +'/nodeproxy/' +session.sessionId);
+	}
+
 	function enableSubmit(value) {
 		d3.select('#connect').property('disabled', !value);
+		if ( value ) {
+			enableSetupGui(false);
+		}
+	}
+
+	function enableSetupGui(value) {
+		d3.select('#setup-gui').property('disabled', !value);
 	}
 
 	function termWriteBrightGreen(text, newline) {
@@ -258,6 +270,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 					termWriteSuccess();
 					socketState = 1;
 					terminal.attach(socket);
+					enableSetupGui(true);
 				} else {
 					termWriteFailed();
 					termWriteBrightRed('Failed to attach to SSH session: ' +event.data, true);
@@ -268,6 +281,10 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		}
 	}
 
+	function launchSetupGui() {
+		setupGuiWindow = window.open(setupGuiURL());
+	}
+
 	function start() {
 		terminal = new Terminal();
 		terminal.open(document.getElementById('terminal'), true);
@@ -276,6 +293,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function init() {
 		d3.select('#connect').on('click', connect);
+		d3.select('#setup-gui').on('click', launchSetupGui);
 		return Object.defineProperties(self, {
 			start: { value: start },
 		});
