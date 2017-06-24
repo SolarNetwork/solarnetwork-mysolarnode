@@ -34,9 +34,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import net.solarnetwork.solarssh.service.DefaultSolarNetClient;
 import net.solarnetwork.solarssh.service.DefaultSolarSshService;
-import net.solarnetwork.solarssh.service.DefaultSolarSshdService;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
+import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
 
 /**
  * Main service configuration.

@@ -20,7 +20,7 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.service;
+package net.solarnetwork.solarssh.sshd;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +42,7 @@ import org.springframework.core.io.Resource;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
-import net.solarnetwork.solarssh.sshd.SolarSshPublicKeyAuthenticator;
+import net.solarnetwork.solarssh.service.SolarSshdService;
 
 /**
  * Service to manage the SSH server.
