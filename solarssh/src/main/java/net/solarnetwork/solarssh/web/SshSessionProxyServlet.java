@@ -102,8 +102,8 @@ public class SshSessionProxyServlet extends ProxyServlet {
       case ProxyServlet.P_TARGET_URI:
         return "http://127.0.0.1:" + session.getReverseHttpPort();
 
-      case ProxyServlet.P_PRESERVEHOST:
-        return Boolean.TRUE.toString();
+      case ProxyServlet.P_CONNECTTIMEOUT:
+        return "30000";
 
       default:
         return null;
