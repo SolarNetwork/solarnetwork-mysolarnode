@@ -198,7 +198,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			'application/x-www-form-urlencoded',
 			new Date()
 		);
-		terminal.write('Requesting SolarNode to connect to remote SSH session... ');
+		terminal.write('Requesting SolarNode to establish remote SSH session... ');
 		return executeWithPreSignedAuthorization('GET', url, authorization)
 			.on('load', handleStartSession)
 			.on('error', function(xhr) {
@@ -261,7 +261,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function waitForStartRemoteSsh() {
-		terminal.write('Waiting for SolarNode to connect to remote SSH session...');
+		terminal.write('Waiting for SolarNode to establish remote SSH session...');
 		var url = nodeUrlHelper.viewInstruction(session.startInstructionId);
 		function executeQuery() {
 			if ( !session ) {
