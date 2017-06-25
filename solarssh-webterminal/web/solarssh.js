@@ -371,6 +371,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		terminal = new Terminal();
 		terminal.open(document.getElementById('terminal'), true);
 		termWriteGreeting();
+		return self;
 	}
 
 	function stop() {
@@ -379,6 +380,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		} else {
 			reset();
 		}
+		return self;
 	}
 
 	function init() {
@@ -399,8 +401,6 @@ function setupUI(env) {
 }
 
 function startApp(env) {
-	var urlHelper;
-
 	if ( !env ) {
 		env = sn.util.copy(devEnv, sn.util.copy(sn.env, {
 			nodeId : 167,
@@ -412,13 +412,11 @@ function startApp(env) {
 
 	setupUI(env);
 
-	urlHelper = sn.api.node.nodeUrlHelper(env.nodeId, env);
-
-	app = solarSshApp(urlHelper, env)
+	app = solarSshApp(sn.api.node.nodeUrlHelper(env.nodeId, env), env)
 		.start();
 
 	window.onbeforeunload = function() {
-
+		app.stop();
 	}
 
 	return app;
