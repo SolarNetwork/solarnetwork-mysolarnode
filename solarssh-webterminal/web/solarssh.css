@@ -65,3 +65,8 @@ button:disabled {
 	background-color: #666;
 	opacity: 0.5;
 }
+
+button.destructive {
+	background-color: #c00;
+	color: #fff;
+}

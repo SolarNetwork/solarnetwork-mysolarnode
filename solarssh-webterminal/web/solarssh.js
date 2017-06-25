@@ -18,6 +18,7 @@ var devEnv = {
 var ansiEscapes = {
 	color: {
 		bright: {
+			gray:	'\x1B[30;1m',
 			green:	'\x1B[32;1m',
 			red:	'\x1B[31;1m',
 			yellow:	'\x1B[33;1m',
@@ -34,10 +35,31 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var helper = sn.net.securityHelper();
 	var config = (options || {});
 	var terminal;
+
 	var session;
 	var socket;
 	var socketState = 0;
 	var setupGuiWindow;
+
+	function reset() {
+		if ( setupGuiWindow ) {
+			setupGuiWindow = undefined;
+		}
+		if ( socket ) {
+			if ( terminal ) {
+				terminal.detach(socket);
+			}
+			socket.close();
+			socket = undefined;
+		}
+		socketState = 0;
+		session = undefined;
+		if ( terminal ) {
+			terminal.clear();
+			termWriteGreeting();
+		}
+		enableSubmit(true);
+	}
 
 	function hostURL() {
 		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost);
@@ -59,6 +81,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		d3.select('#connect').property('disabled', !value);
 		if ( value ) {
 			enableSetupGui(false);
+			enableEnd(false);
 		}
 	}
 
@@ -66,8 +89,20 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		d3.select('#setup-gui').property('disabled', !value);
 	}
 
-	function termWriteBrightGreen(text, newline) {
-		var value = ansiEscapes.color.bright.green +text +ansiEscapes.reset;
+	function enableEnd(value) {
+		d3.select('#end').property('disabled', !value);
+	}
+
+	function termEscapedText(esc, text, withoutReset) {
+		var value = esc + text;
+		if ( !withoutReset ) {
+			value += ansiEscapes.reset;
+		}
+		return value;
+	}
+
+	function termWriteEscapedText(esc, text, newline, withoutReset) {
+		var value = termEscapedText(esc, text, withoutReset);
 		if ( newline ) {
 			terminal.writeln(value);
 		} else {
@@ -75,13 +110,19 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		}
 	}
 
+	function termWriteBrightGreen(text, newline) {
+		termWriteEscapedText(ansiEscapes.color.bright.green, text, newline);
+	}
+
 	function termWriteBrightRed(text, newline) {
-		var value = ansiEscapes.color.bright.red +text +ansiEscapes.reset;
-		if ( newline ) {
-			terminal.writeln(value);
-		} else {
-			terminal.write(value);
-		}
+		termWriteEscapedText(ansiEscapes.color.bright.red, text, newline);
+	}
+
+	function termWriteGreeting() {
+		terminal.writeln('Hello from '
+			+termEscapedText(ansiEscapes.color.bright.yellow, 'Solar')
+			+termEscapedText(ansiEscapes.color.bright.gray, 'SSH')
+			+'!');
 	}
 
 	function termWriteSuccess(withoutNewline) {
@@ -175,13 +216,57 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		termWriteSuccess();
 		console.log('Started session %s', json.data.sessionId);
 		session = json.data;
+		enableEnd(true);
 		waitForStartRemoteSsh();
+	}
+
+	function stopSession() {
+		if ( socket && terminal ) {
+			terminal.detach(socket);
+			terminal.writeln('');
+			socket.close();
+			socket = undefined;
+		}
+		var url = baseURL() + '/session/' +session.sessionId +'/stop';
+		var authorization = helper.computeAuthorization(
+			nodeUrlHelper.queueInstructionURL('StopRemoteSsh', [
+				{name: 'host', value: session.host},
+				{name: 'user', value: session.sessionId},
+				{name: 'port', value: session.port},
+				{name: 'rport', value: session.reversePort }
+			]),
+			'POST',
+			undefined,
+			'application/x-www-form-urlencoded',
+			new Date()
+		);
+		terminal.write('Requesting SolarNode to stop remote SSH session... ');
+		return executeWithPreSignedAuthorization('GET', url, authorization)
+			.on('load', handleStopSession)
+			.on('error', function(xhr) {
+				console.error('Failed to stop session: %s', xhr.responseText);
+				enableSubmit(true);
+			});
+	}
+
+	function handleStopSession(json) {
+		if ( !json.success ) {
+			console.error('Failed to stop session: %s', JSON.stringify(json));
+			termWriteFailed();
+		} else {
+			console.log('Stopped session %s', session.sessionId);
+			termWriteSuccess();
+		}
+		setTimeout(reset, 1000);
 	}
 
 	function waitForStartRemoteSsh() {
 		terminal.write('Waiting for SolarNode to connect to remote SSH session...');
 		var url = nodeUrlHelper.viewInstruction(session.startInstructionId);
 		function executeQuery() {
+			if ( !session ) {
+				return;
+			}
 			helper.json(url)
 				.on('load', function(json) {
 					if ( !(json.success && json.data && json.data.state) ) {
@@ -226,7 +311,6 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		socket.onmessage = webSocketMessage;
 		socket.onerror = webSocketError;
 		socket.onclose = webSocketClose;
-		//terminal.attach(socket);
 	}
 
 	function webSocketOpen(event) {
@@ -262,22 +346,20 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function webSocketMessage(event) {
 		var msg;
-		// TODO: do we have any socketState values other than 0/1?
-		switch ( socketState ) {
-			case 0:
-				msg = JSON.parse(event.data);
-				if ( msg.success ) {
-					termWriteSuccess();
-					socketState = 1;
-					terminal.attach(socket);
-					enableSetupGui(true);
-				} else {
-					termWriteFailed();
-					termWriteBrightRed('Failed to attach to SSH session: ' +event.data, true);
-					enableSubmit(true);
-					socket.close();
-				}
-				break;
+		if ( socketState !== 0 ) {
+			return;
+		}
+		msg = JSON.parse(event.data);
+		if ( msg.success ) {
+			termWriteSuccess();
+			socketState = 1;
+			terminal.attach(socket);
+			enableSetupGui(true);
+		} else {
+			termWriteFailed();
+			termWriteBrightRed('Failed to attach to SSH session: ' +event.data, true);
+			enableSubmit(true);
+			socket.close();
 		}
 	}
 
@@ -288,14 +370,24 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	function start() {
 		terminal = new Terminal();
 		terminal.open(document.getElementById('terminal'), true);
-		terminal.writeln('Hello from \x1B[33;1mSolar\x1B[30;1mSSH\x1B[0m!');
+		termWriteGreeting();
+	}
+
+	function stop() {
+		if ( session ) {
+			stopSession();
+		} else {
+			reset();
+		}
 	}
 
 	function init() {
 		d3.select('#connect').on('click', connect);
 		d3.select('#setup-gui').on('click', launchSetupGui);
+		d3.select('#end').on('click', stop);
 		return Object.defineProperties(self, {
 			start: { value: start },
+			stop: { value: stop },
 		});
 	}
 
@@ -324,6 +416,10 @@ function startApp(env) {
 
 	app = solarSshApp(urlHelper, env)
 		.start();
+
+	window.onbeforeunload = function() {
+
+	}
 
 	return app;
 }
