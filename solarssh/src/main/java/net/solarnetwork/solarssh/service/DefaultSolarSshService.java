@@ -230,7 +230,22 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     }
 
     sess.setStopInstructionId(instructionId);
+    endSession(sess);
+    portSessionMap.remove(sess.getReverseSshPort(), sess);
+    sessionMap.remove(sess.getId(), sess);
     return sess;
+  }
+
+  private void endSession(SshSession session) {
+    if (session == null) {
+      return;
+    }
+    ClientSession clientSession = session.getClientSession();
+    if (clientSession != null) {
+      clientSession.close(false);
+      session.setClientSession(null);
+    }
+    session.setEstablished(false);
   }
 
   private Map<String, Object> createRemoteSshInstructionParams(SshSession sess) {
@@ -248,11 +263,15 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   public void cleanupExpiredSessions() {
     final long expireTime = System.currentTimeMillis()
         - TimeUnit.SECONDS.toMillis(sessionExpireSeconds);
+    if (log.isDebugEnabled()) {
+      log.debug("Examining {} sessions for expiration", portSessionMap.size());
+    }
     for (Iterator<SshSession> itr = portSessionMap.values().iterator(); itr.hasNext();) {
       SshSession sess = itr.next();
       if (!sess.isEstablished() && sess.getCreated() < expireTime) {
         log.info("Expiring unestablished SshSession {}: node {}, rport {}", sess.getId(),
             sess.getNodeId(), sess.getReverseSshPort());
+        endSession(sess);
         itr.remove();
         sessionMap.remove(sess.getId(), sess);
       }
