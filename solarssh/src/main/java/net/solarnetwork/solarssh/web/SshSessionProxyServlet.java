@@ -27,6 +27,7 @@ import java.util.Enumeration;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
@@ -94,6 +95,42 @@ public class SshSessionProxyServlet extends ProxyServlet {
   protected HttpClient createHttpClient(RequestConfig requestConfig) {
     return HttpClientBuilder.create().setDefaultRequestConfig(requestConfig).setDefaultHeaders(
         Collections.singletonList(new BasicHeader("X-Forwarded-Path", proxyPath))).build();
+  }
+
+  @Override
+  protected String getTargetUri(HttpServletRequest servletRequest) {
+    String targetUri = (String) servletRequest.getAttribute(ATTR_TARGET_URI);
+    String requestUri = servletRequest.getRequestURI();
+    if (requestUri.startsWith(proxyPath) && requestUri.length() > proxyPath.length()) {
+      targetUri += requestUri.substring(proxyPath.length() - 1);
+    }
+    return targetUri;
+  }
+
+  @Override
+  protected String rewriteUrlFromResponse(HttpServletRequest servletRequest, String theUrl) {
+    int redirectUrlPos = theUrl.indexOf("://");
+    if (redirectUrlPos >= 0) {
+      redirectUrlPos = theUrl.indexOf("/", redirectUrlPos + 3);
+    }
+    if (redirectUrlPos < 0) {
+      redirectUrlPos = 0;
+    }
+
+    StringBuffer curUrl = servletRequest.getRequestURL();
+    int pos = curUrl.indexOf("://");
+    if (pos >= 0) {
+      if ((pos = curUrl.indexOf("/", pos + 3)) >= 0) {
+        curUrl.setLength(pos);
+      }
+    }
+    if (!theUrl.startsWith(proxyPath, redirectUrlPos)) {
+      curUrl.append(proxyPath);
+    }
+    curUrl.append(theUrl, redirectUrlPos, theUrl.length());
+    theUrl = curUrl.toString();
+
+    return theUrl;
   }
 
   @Override
