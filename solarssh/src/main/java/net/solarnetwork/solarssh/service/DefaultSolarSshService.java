@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelShell;
 import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.keyprovider.KeyPairProvider;
+import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.util.io.NoCloseInputStream;
 import org.apache.sshd.common.util.io.NoCloseOutputStream;
 import org.slf4j.Logger;
@@ -202,6 +204,12 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   private ClientSession createClient(SshSession sess, SshCredentials credentials, InputStream in,
       OutputStream out) throws IOException {
     SshClient client = SshClient.setUpDefaultClient();
+
+    if (credentials.getKeyPair() != null) {
+      client.setKeyPairProvider(new MappedKeyPairProvider(credentials.getKeyPair()));
+    } else {
+      client.setKeyPairProvider(KeyPairProvider.EMPTY_KEYPAIR_PROVIDER);
+    }
     client.start();
 
     ClientSession session = client
@@ -209,9 +217,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
         .verify(30, TimeUnit.SECONDS).getSession();
     if (credentials.getPassword() != null) {
       session.addPasswordIdentity(credentials.getPassword());
-    }
-    if (credentials.getKeyPair() != null) {
-      session.addPublicKeyIdentity(credentials.getKeyPair());
     }
 
     session.auth().verify(30, TimeUnit.SECONDS);
