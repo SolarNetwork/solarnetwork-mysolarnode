@@ -22,6 +22,9 @@
 
 package net.solarnetwork.solarssh.domain;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.sshd.client.session.ClientSession;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -151,6 +154,21 @@ public class SshSession {
   @JsonIgnore
   public void setClientSession(ClientSession clientSession) {
     this.clientSession = clientSession;
+  }
+
+  /**
+   * Get a Map of standard audit event properties.
+   * 
+   * @param eventName
+   *        the audit event name
+   * @return the properties
+   */
+  public Map<String, Object> auditEventMap(String eventName) {
+    Map<String, Object> map = new LinkedHashMap<>(8);
+    map.put("nodeId", nodeId);
+    map.put("sessionId", id);
+    map.put("event", eventName);
+    return map;
   }
 
   @Override

@@ -27,6 +27,8 @@ import java.io.InputStream;
 import java.security.KeyPair;
 import java.util.Collections;
 
+import org.apache.sshd.common.channel.Channel;
+import org.apache.sshd.common.channel.ChannelListener;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
@@ -47,7 +49,7 @@ import net.solarnetwork.solarssh.service.SolarSshdService;
  * @author matt
  * @version 1.0
  */
-public class DefaultSolarSshdService implements SolarSshdService, SessionListener {
+public class DefaultSolarSshdService implements SolarSshdService, SessionListener, ChannelListener {
 
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 8022;
@@ -107,6 +109,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     s.setTcpipForwardingFilter(new SshSessionForwardFilter(sessionDao));
 
     s.addSessionListener(this);
+    s.addChannelListener(this);
 
     try {
       s.start();
@@ -125,6 +128,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     if (s != null && s.isOpen()) {
       try {
         s.removeSessionListener(this);
+        s.removeChannelListener(this);
         s.stop();
       } catch (IOException e) {
         LOG.warn("Communication error stopping SSH server: {}", e.getMessage());
@@ -134,6 +138,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
 
   @Override
   public void sessionEvent(Session session, Event event) {
+    LOG.debug("Session {} event: {}", session.getUsername(), event);
     if (event == SessionListener.Event.Authenticated) {
       String sessionId = session.getUsername();
       SshSession sess = sessionDao.findOne(sessionId);
@@ -141,6 +146,53 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         sess.setEstablished(true);
       }
     }
+  }
+
+  @Override
+  public void sessionCreated(Session session) {
+    LOG.debug("Session {} created", session.getUsername());
+  }
+
+  @Override
+  public void sessionException(Session session, Throwable t) {
+    LOG.warn("Session {} exception", session.getUsername(), t);
+  }
+
+  @Override
+  public void sessionClosed(Session session) {
+    LOG.info("Session {} closed", session.getUsername());
+    String sessionId = session.getUsername();
+    SshSession sess = sessionDao.findOne(sessionId);
+    if (sess != null) {
+      sessionDao.delete(sess);
+    }
+  }
+
+  @Override
+  public void channelInitialized(Channel channel) {
+    LOG.debug("Channel {} initialized", channel);
+  }
+
+  @Override
+  public void channelOpenSuccess(Channel channel) {
+    LOG.debug("Channel {} open success", channel);
+  }
+
+  @Override
+  public void channelOpenFailure(Channel channel, Throwable reason) {
+    LOG.debug("Channel {} open failure", channel, reason);
+  }
+
+  @Override
+  public void channelStateChanged(Channel channel, String hint) {
+    LOG.debug("Channel {} from session {} state changed: {}", channel,
+        channel.getSession().getUsername(), hint);
+  }
+
+  @Override
+  public void channelClosed(Channel channel, Throwable reason) {
+    LOG.debug("Channel {} from session {} closed", channel, channel.getSession().getUsername(),
+        reason);
   }
 
   /**

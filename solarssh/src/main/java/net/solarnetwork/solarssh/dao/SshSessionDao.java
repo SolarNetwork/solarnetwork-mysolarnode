@@ -43,4 +43,14 @@ public interface SshSessionDao {
    */
   SshSession findOne(String id);
 
+  /**
+   * Deletes a given {@code SshSession}.
+   * 
+   * @param entity
+   *        the session to delete
+   * @throws IllegalArgumentException
+   *         in case the given entity is {@literal null}.
+   */
+  void delete(SshSession entity);
+
 }

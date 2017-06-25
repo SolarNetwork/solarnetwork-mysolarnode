@@ -51,6 +51,7 @@ import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.util.JsonUtils;
 
 /**
  * Default implementation of {@link SolarSshService}.
@@ -59,6 +60,9 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * @version 1.0
  */
 public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
+
+  private static final Logger AUDIT_LOG = LoggerFactory.getLogger("SshSession.AUDIT");
+  private static final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
 
   private static final String REVERSE_PORT_PARAM = "rport";
   private static final String PORT_PARAM = "port";
@@ -75,8 +79,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   private final ConcurrentMap<Integer, SshSession> portSessionMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, SshSession> sessionMap = new ConcurrentHashMap<>();
 
-  private final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
-
   /**
    * Constructor.
    * 
@@ -90,7 +92,20 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
   @Override
   public SshSession findOne(String id) {
+    if (id == null) {
+      throw new IllegalArgumentException("Null value not allowed.");
+    }
     return sessionMap.get(id);
+  }
+
+  @Override
+  public void delete(SshSession sess) {
+    if (sess == null) {
+      throw new IllegalArgumentException("Null value not allowed.");
+    }
+    endSession(sess);
+    portSessionMap.remove(sess.getReverseSshPort(), sess);
+    sessionMap.remove(sess.getId(), sess);
   }
 
   @Override
@@ -128,6 +143,9 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
           if (portSessionMap.putIfAbsent(rport, sess) == null) {
             sessionMap.put(sessionId, sess);
             log.info("SshSession {} created: node {}, rport {}", sessionId, nodeId, rport);
+            Map<String, Object> auditProps = sess.auditEventMap("NEW");
+            auditProps.put("date", sess.getCreated());
+            AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
             return sess;
           }
         } catch (SocketException e) {
@@ -171,7 +189,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     }
     GeneralDatumMetadata meta = solarNetClient.getNodeMetadata(sess.getNodeId(), authorizationDate,
         authorization);
-    log.debug("Got node {} metadata into: {}", sess.getNodeId(), meta.getInfo());
+    log.debug("Got node {} metadata info: {}", sess.getNodeId(), meta.getInfo());
 
     // TODO: extract node public key? by doing nothing, we have at least verified the 
     //       caller has authorization as a user for this node...
@@ -183,9 +201,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
   private ClientSession createClient(SshSession sess, SshCredentials credentials, InputStream in,
       OutputStream out) throws IOException {
-    // TODO Auto-generated method stub
     SshClient client = SshClient.setUpDefaultClient();
-
     client.start();
 
     ClientSession session = client
@@ -230,22 +246,27 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     }
 
     sess.setStopInstructionId(instructionId);
-    endSession(sess);
-    portSessionMap.remove(sess.getReverseSshPort(), sess);
-    sessionMap.remove(sess.getId(), sess);
+    delete(sess);
     return sess;
   }
 
-  private void endSession(SshSession session) {
-    if (session == null) {
+  private void endSession(SshSession sess) {
+    if (sess == null) {
       return;
     }
-    ClientSession clientSession = session.getClientSession();
+    ClientSession clientSession = sess.getClientSession();
     if (clientSession != null) {
       clientSession.close(false);
-      session.setClientSession(null);
+      sess.setClientSession(null);
+      log.debug("Ended session {}", sess.getId());
+      long now = System.currentTimeMillis();
+      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
+      Map<String, Object> auditProps = sess.auditEventMap("END");
+      auditProps.put("date", now);
+      auditProps.put("duration", secs);
+      AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
     }
-    session.setEstablished(false);
+    sess.setEstablished(false);
   }
 
   private Map<String, Object> createRemoteSshInstructionParams(SshSession sess) {
