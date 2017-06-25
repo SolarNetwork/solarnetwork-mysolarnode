@@ -138,7 +138,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
 
   @Override
   public void sessionEvent(Session session, Event event) {
-    LOG.debug("Session {} event: {}", session.getUsername(), event);
     if (event == SessionListener.Event.Authenticated) {
       String sessionId = session.getUsername();
       SshSession sess = sessionDao.findOne(sessionId);
@@ -146,11 +145,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         sess.setEstablished(true);
       }
     }
-  }
-
-  @Override
-  public void sessionCreated(Session session) {
-    LOG.debug("Session {} created", session.getUsername());
   }
 
   @Override
@@ -169,11 +163,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   }
 
   @Override
-  public void channelInitialized(Channel channel) {
-    LOG.debug("Channel {} initialized", channel);
-  }
-
-  @Override
   public void channelOpenSuccess(Channel channel) {
     LOG.debug("Channel {} open success", channel);
   }
@@ -181,12 +170,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   @Override
   public void channelOpenFailure(Channel channel, Throwable reason) {
     LOG.debug("Channel {} open failure", channel, reason);
-  }
-
-  @Override
-  public void channelStateChanged(Channel channel, String hint) {
-    LOG.debug("Channel {} from session {} state changed: {}", channel,
-        channel.getSession().getUsername(), hint);
   }
 
   @Override
