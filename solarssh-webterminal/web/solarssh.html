@@ -11,7 +11,7 @@
 	<link type="text/css" rel="stylesheet" href="dialog-polyfill.css">
 </head>
 <body>
-	<header>
+	<header class="hboxrow">
 		<h1>SolarNode <span class="node-id"></span> SSH</h1>
 		<input type="text" name="token" placeholder="Token" value="a09sjds09wu9wjsd9uy2"
 			autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -28,11 +28,13 @@
 		<form method="dialog">
 			<p>Enter your SolarNode SSH credentials, or use <b>Skip</b> (or type <kbd>Esc</kbd>)
 				to skip SSH access and only access the SolarNode Setup GUI.</p>
-			<input type="text" name="user" placeholder="Username" value="solar"
-				autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-			<input type="password" name="pass" placeholder="Password" value="solar">
-			<button type="submit" value="login">Login</button>
-			<button type="submit" class="secondary" value="skip">Skip</button>
+			<div class="hboxrow">
+				<input type="text" name="user" placeholder="Username" value="solar"
+					autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+				<input type="password" name="pass" placeholder="Password" value="solar">
+				<button type="submit" value="login">Login</button>
+				<button type="submit" class="secondary" value="skip">Skip</button>
+			</div>
 		</form>
 	</dialog>
 	<script type="text/javascript" src="js-lib/d3.min.js"></script>
