@@ -68,6 +68,13 @@ dialog > form {
 	max-width: 480px;
 }
 
+input + input,
+input + button,
+button + button {
+	margin-left: 2px;
+	margin-right: 2px;
+}
+
 dialog::backdrop { /* native */
   background-color: rgba(0,0,0,0.6) !important;
 }
