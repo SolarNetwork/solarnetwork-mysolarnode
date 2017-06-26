@@ -46,7 +46,7 @@ import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
  */
 @Configuration
 @PropertySource("classpath:application.properties")
-@PropertySource("classpath:application-test.properties")
+@PropertySource(value = "classpath:application-test.properties", ignoreResourceNotFound = true)
 @EnableScheduling
 public class ServiceConfig {
 
