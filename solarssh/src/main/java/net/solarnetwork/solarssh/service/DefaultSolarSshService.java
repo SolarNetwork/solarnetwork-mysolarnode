@@ -291,14 +291,14 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     if (clientSession != null) {
       clientSession.close(false);
       sess.setClientSession(null);
-      log.debug("Ended session {}", sess.getId());
-      long now = System.currentTimeMillis();
-      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
-      Map<String, Object> auditProps = sess.auditEventMap("END");
-      auditProps.put("date", now);
-      auditProps.put("duration", secs);
-      AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
     }
+    log.debug("Ended session {}", sess.getId());
+    long now = System.currentTimeMillis();
+    long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
+    Map<String, Object> auditProps = sess.auditEventMap("END");
+    auditProps.put("date", now);
+    auditProps.put("duration", secs);
+    AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
     sess.setEstablished(false);
   }
 
