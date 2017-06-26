@@ -30,6 +30,11 @@ var ansiEscapes = {
 
 var app;
 
+/**
+ * SolarSSH web app, supporting a SSH terminal (via xterm.js) and integration with the HTTP proxy.
+ *
+ * @class
+ */
 var solarSshApp = function(nodeUrlHelper, options) {
 	var self = { version : '0.1.0' };
 	var helper = sn.net.securityHelper();
@@ -37,17 +42,68 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var sshCredentialsDialog;
 	var terminal;
 
+	var termSettings = {
+		cols: (config.cols || 100),
+		lines: (config.lines || 24),
+	};
+
 	var session;
 	var socket;
 	var socketState = 0;
 	var setupGuiWindow;
 	var sshCredentials;
 
+	var dialogCancelled = false;
+
+	/**
+	 * Get/set the terminal column size.
+	 *
+	 * Defaults to 100.
+	 *
+	 * @param {Number} [value] if provided, set the column size to this value
+	 * @return if invoked as a getter, the current column size value; otherwise this object
+	 */
+	function cols(value) {
+		if ( !arguments.length ) return termSettings.cols;
+		if ( value > 0 ) {
+			termSettings.cols = value;
+		}
+		return self;
+	}
+
+	/**
+	 * Get/set the terminal lines size.
+	 *
+	 * Defaults to 24.
+	 *
+	 * @param {Number} [value] if provided, set the line size to this value
+	 * @return if invoked as a getter, the current line size value; otherwise this object
+	 */
+	function lines(value) {
+		if ( !arguments.length ) return termSettings.lines;
+		if ( value > 0 ) {
+			termSettings.lines = value;
+		}
+		return self;
+	}
+
+	/**
+	 * Get/set the SSH credentials HTML <dialog> element to use.
+	 *
+	 * The <dialog> must include a <form method="dialog"> that includes a username text input field
+	 * and a password input field. If the form is submitted with a "login" value, the credentials
+	 * will be used to establish a SSH terminal session. Otherwise no SSH terminal session will be
+	 * opened (but the HTTP proxy functionality may still be used).
+	 *
+	 * @param {Element} [value] if provided, set the SSH credential dialog element to this value
+	 * @return if invoked as a getter, the current SSH credential dialog element value; otherwise this object
+	 */
 	function sshCredentialsDialog(value) {
 		if ( !arguments.length ) return sshCredentialsDialog;
 		sshCredentialsDialog = value;
 		if ( value ) {
 			value.addEventListener('close', handleSshCredentials);
+			value.addEventListener('cancel', handleSshCredentialsCancel);
 		}
 		return self;
 	}
@@ -299,6 +355,8 @@ var solarSshApp = function(nodeUrlHelper, options) {
 							+' button to view the SolarNode setup GUI.');
 						if ( sshCredentials ) {
 							connectWebSocket();
+						} else {
+							enableSubmit(true, true); // re-enable just the Connect button to establish SSH later
 						}
 					} else if ( 'Declined' === state ) {
 						// bummer!
@@ -324,18 +382,28 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function requestSshCredentials() {
+		dialogCancelled = false;
 		sshCredentialsDialog.showModal();
 	}
 
+	function handleSshCredentialsCancel(event) {
+		dialogCancelled = true;
+	}
+
 	function handleSshCredentials(event) {
-		if ( sshCredentialsDialog.returnValue === 'login' ) {
-			var dialog = d3.select(sshCredentialsDialog);
-			var username = dialog.select('input[type=text]').property('value');
+		var dialog = d3.select(sshCredentialsDialog);
+		var usernameInput = dialog.select('input[type=text]')
+		if ( sshCredentialsDialog.returnValue === 'login' && !dialogCancelled ) {
+			var username = usernameInput.property('value');
 			var password = dialog.select('input[type=password]').property('value');
 			sshCredentials = {username: username, password: password};
 		} else {
 			sshCredentials = undefined;
 		}
+
+		// reset credentials form to clear
+		usernameInput.node().form.reset();
+
 		// if did not provide credentials, we will not connect the websocket
 		if ( !session ) {
 			createSession();
@@ -364,18 +432,21 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			undefined,
 			new Date()
 		);
-		var dialog = d3.select(sshCredentialsDialog);
-		var username = dialog.select('input[type=text]').property('value');
-		var password = dialog.select('input[type=password]').property('value');
 		var msg = {
 			cmd: "attach-ssh",
 			data: {
 				'authorization': authorization.header,
 				'authorization-date': authorization.date.getTime(),
-				'username': username,
-				'password' : password,
+				'username': (sshCredentials ? sshCredentials.username : ''),
+				'password' : (sshCredentials ? sshCredentials.password : ''),
+				'term' : 'xterm',
+				'cols' : cols(),
+				'lines' : lines(),
 			}
 		};
+
+		// clear saved credentials
+		sshCredentials = undefined;
 
 		socket.send(JSON.stringify(msg));
 	}
@@ -386,12 +457,21 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		if ( event.code === 1000 ) {
 			// CLOSE_NORMAL
 			if ( terminal ) {
+				terminal.writeln('');
 				terminal.writeln('Use the '
 					+termEscapedText(ansiEscapes.color.bright.yellow, 'Connect')
 					+' button to reconnect via SSH.');
 				terminal.writeln('The '
 					+termEscapedText(ansiEscapes.color.bright.yellow, 'Setup')
 					+' button can still be used to view the SolarNode setup GUI.');
+			}
+		} else if ( event.code === 4000 ) {
+			// AUTHENTICATION_FAILURE
+			if ( terminal ) {
+                termWriteFailed();
+				if ( event.reason ) {
+					termWriteBrightRed(event.reason, true);
+				}
 			}
 		} else if ( terminal ) {
 			terminal.writeln('Connection closed: ' +event.reason);
@@ -424,13 +504,30 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		setupGuiWindow = window.open(setupGuiURL());
 	}
 
+	/**
+	 * Initialize the app.
+	 *
+	 * This will initialize the terminal and prepare the app for use.
+	 *
+	 * @return this object
+	 */
 	function start() {
-		terminal = new Terminal();
+		terminal = new Terminal({
+			cols: 120,
+			tabStopWidth: 4
+		});
 		terminal.open(document.getElementById('terminal'), true);
 		termWriteGreeting();
 		return self;
 	}
 
+	/**
+	 * Stop the app.
+	 *
+	 * This will stop any active session and reset the app for re-use.
+	 *
+	 * @return this object
+	 */
 	function stop() {
 		if ( session ) {
 			stopSession();
@@ -445,9 +542,16 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		d3.select('#setup-gui').on('click', launchSetupGui);
 		d3.select('#end').on('click', stop);
 		return Object.defineProperties(self, {
+			// property getter/setter functions
+
+			cols: { value: cols },
+			lines: { value: lines },
+			sshCredentialsDialog: { value: sshCredentialsDialog },
+
+			// action methods
+
 			start: { value: start },
 			stop: { value: stop },
-			sshCredentialsDialog: { value: sshCredentialsDialog },
 		});
 	}
 

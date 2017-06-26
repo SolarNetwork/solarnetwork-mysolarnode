@@ -33,11 +33,14 @@ import java.util.List;
 import java.util.Map;
 
 import javax.websocket.CloseReason;
+import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
+import org.apache.sshd.common.SshConstants;
+import org.apache.sshd.common.SshException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.domain.SshTerminalSettings;
 import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.util.JsonUtils;
 
@@ -84,20 +88,29 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
     String sshSessionId = values.get(0);
     sshSession = solarSshService.findOne(sshSessionId);
 
+    if (sshSession == null) {
+      try {
+        session.close(new CloseReason(
+            CloseCodes.getCloseCode(SolarSshCloseCodes.AUTHENTICATION_FAILURE.getCode()),
+            "Unknown session"));
+      } catch (IOException e) {
+        LOG.warn("Communication error closing websocket session", e);
+      }
+      return;
+    }
+
     websocketSession = session;
     session.addMessageHandler(this);
   }
 
   @Override
   public void onClose(Session session, CloseReason closeReason) {
-    // TODO Auto-generated method stub
-    super.onClose(session, closeReason);
+    LOG.debug("Websocket closed; {}; {}", sshSession, closeReason);
   }
 
   @Override
   public void onError(Session session, Throwable thr) {
-    // TODO Auto-generated method stub
-    super.onError(session, thr);
+    LOG.warn("Websocket error; {}", sshSession, thr);
   }
 
   @Override
@@ -107,7 +120,7 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
         wsInputSink.write(msg);
         wsInputSink.flush();
       } catch (IOException e) {
-        LOG.error("IOException for node {} session {}", sshSession.getNodeId(), sshSession.getId(),
+        LOG.warn("IOException for node {} session {}", sshSession.getNodeId(), sshSession.getId(),
             e);
       }
       return;
@@ -116,38 +129,41 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
   }
 
   private void authenticate(String msg) {
-    Map<String, ?> msgData = JsonUtils.getStringMap(msg);
-    if (msgData == null) {
-      throw new AuthorizationException("Message not provided");
-    }
-    Object cmd = msgData.get("cmd");
-    if (!"attach-ssh".equals(cmd)) {
-      throw new AuthorizationException("'attach-ssh' message not provided; got " + cmd);
-    }
-    Object data = msgData.get("data");
-    if (!(data instanceof Map)) {
-      throw new AuthorizationException("'attach-ssh' data not provided");
-    }
-    Map<?, ?> dataMap = (Map<?, ?>) data;
-    Object auth = dataMap.get("authorization");
-    Object authDate = dataMap.get("authorization-date");
-    if (!(auth instanceof String && authDate instanceof Number)) {
-      throw new AuthorizationException(
-          "'attach-ssh' authorization or authorization-date data not provided");
-    }
-
-    Object uname = dataMap.get("username");
-    Object pass = dataMap.get("password");
-    // TODO: keypair dataMap.get("keypair");
-
-    SshCredentials creds;
-    if (uname != null) {
-      creds = new SshCredentials(uname.toString(), (pass != null ? pass.toString() : null));
-    } else {
-      throw new AuthorizationException("'attach-ssh' username data not provided");
-    }
-
+    CloseReason closeReason = null;
     try {
+      Map<String, ?> msgData = JsonUtils.getStringMap(msg);
+      if (msgData == null) {
+        throw new IllegalArgumentException("Message not provided");
+      }
+      Object cmd = msgData.get("cmd");
+      if (!"attach-ssh".equals(cmd)) {
+        throw new IllegalArgumentException("'attach-ssh' message not provided; got " + cmd);
+      }
+      Object data = msgData.get("data");
+      if (!(data instanceof Map)) {
+        throw new IllegalArgumentException("'attach-ssh' data not provided");
+      }
+      Map<?, ?> dataMap = (Map<?, ?>) data;
+      Object auth = dataMap.get("authorization");
+      Object authDate = dataMap.get("authorization-date");
+      if (!(auth instanceof String && authDate instanceof Number)) {
+        throw new IllegalArgumentException(
+            "'attach-ssh' authorization or authorization-date data not provided");
+      }
+
+      Object uname = dataMap.get("username");
+      Object pass = dataMap.get("password");
+      // TODO: keypair dataMap.get("keypair");
+
+      SshCredentials creds;
+      if (uname != null) {
+        creds = new SshCredentials(uname.toString(), (pass != null ? pass.toString() : null));
+      } else {
+        throw new AuthorizationException("'attach-ssh' credentials not provided");
+      }
+
+      SshTerminalSettings termSettings = settingsFromMap(dataMap);
+
       PipedInputStream sshStdin = new PipedInputStream();
       PipedOutputStream pipeOut = new PipedOutputStream(sshStdin);
 
@@ -155,8 +171,9 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
 
       OutputStream sshStdout = new AsyncTextOutputStream(websocketSession);
 
-      SshSession session = solarSshService.registerClient(sshSession.getId(),
-          ((Number) authDate).longValue(), auth.toString(), creds, sshStdin, sshStdout);
+      SshSession session = solarSshService.attachTerminal(sshSession.getId(),
+          ((Number) authDate).longValue(), auth.toString(), creds, termSettings, sshStdin,
+          sshStdout);
       sshSession = session;
 
       Map<String, Object> resultMsg = new LinkedHashMap<>(2);
@@ -165,11 +182,69 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
 
       websocketSession.getBasicRemote().sendText(JsonUtils.getJSONString(resultMsg,
           "{\"success\":false,\"message\":\"Error serializing JSON response\"}"));
+    } catch (AuthorizationException e) {
+      closeReason = new CloseReason(SolarSshCloseCodes.AUTHENTICATION_FAILURE, e.getMessage());
+    } catch (IllegalArgumentException e) {
+      closeReason = new CloseReason(CloseReason.CloseCodes.PROTOCOL_ERROR, e.getMessage());
+    } catch (SshException e) {
+      switch (e.getDisconnectCode()) {
+        case SshConstants.SSH2_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE:
+        case SshConstants.SSH2_DISCONNECT_ILLEGAL_USER_NAME:
+          // bad credentials
+          closeReason = new CloseReason(SolarSshCloseCodes.AUTHENTICATION_FAILURE,
+              "Bad credentials");
+          break;
+
+        default:
+          closeReason = new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, e.getMessage());
+
+      }
     } catch (IOException e) {
       LOG.error("IOException for node {} session {}", sshSession.getNodeId(), sshSession.getId(),
           e);
+      closeReason = new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, e.getMessage());
+    } finally {
+      if (closeReason != null) {
+        try {
+          websocketSession.close(closeReason);
+        } catch (IOException ioe) {
+          LOG.warn("Communication error closing websocket session", ioe);
+        }
+      }
     }
+  }
 
+  private SshTerminalSettings settingsFromMap(Map<?, ?> dataMap) {
+    SshTerminalSettings termSettings = new SshTerminalSettings();
+    Object val = dataMap.get("term");
+    if (val != null) {
+      termSettings.setType(val.toString());
+    }
+    val = dataMap.get("cols");
+    if (val instanceof Number) {
+      termSettings.setCols(((Number) val).intValue());
+    }
+    val = dataMap.get("lines");
+    if (val instanceof Number) {
+      termSettings.setLines(((Number) val).intValue());
+    }
+    val = dataMap.get("width");
+    if (val instanceof Number) {
+      termSettings.setWidth(((Number) val).intValue());
+    }
+    val = dataMap.get("height");
+    if (val instanceof Number) {
+      termSettings.setHeight(((Number) val).intValue());
+    }
+    val = dataMap.get("environment");
+    if (val instanceof Map) {
+      ((Map<?, ?>) val).forEach((k, v) -> {
+        if (k != null && v != null) {
+          termSettings.getEnvironment().put(k.toString(), v.toString());
+        }
+      });
+    }
+    return termSettings;
   }
 
 }

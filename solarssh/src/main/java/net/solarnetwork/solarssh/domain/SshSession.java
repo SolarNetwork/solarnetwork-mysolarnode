@@ -127,7 +127,8 @@ public class SshSession {
 
   @Override
   public String toString() {
-    return "SshSession{id=" + id + ", reverseSshPort=" + reverseSshPort + "}";
+    return "SshSession{id=" + id + ", nodeId=" + nodeId + ", reverseSshPort=" + reverseSshPort
+        + "}";
   }
 
   public Long getStartInstructionId() {

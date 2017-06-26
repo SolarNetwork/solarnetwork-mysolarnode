@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.domain.SshTerminalSettings;
 
 /**
  * API for the SolarSSH service.
@@ -60,8 +61,9 @@ public interface SolarSshService extends SshSessionDao {
   SshSession startSession(String sessionId, long authorizationDate, String authorization)
       throws IOException;
 
-  SshSession registerClient(String sessionId, long authorizationDate, String authorization,
-      SshCredentials nodeCredentials, InputStream in, OutputStream out) throws IOException;
+  SshSession attachTerminal(String sessionId, long authorizationDate, String authorization,
+      SshCredentials nodeCredentials, SshTerminalSettings settings, InputStream in,
+      OutputStream out) throws IOException;
 
   SshSession stopSession(String sessionId, long authorizationDate, String authorization)
       throws IOException;

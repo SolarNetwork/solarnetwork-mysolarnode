@@ -55,6 +55,7 @@ import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.domain.SshTerminalSettings;
 import net.solarnetwork.util.JsonUtils;
 
 /**
@@ -185,8 +186,9 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   }
 
   @Override
-  public SshSession registerClient(String sessionId, long authorizationDate, String authorization,
-      SshCredentials nodeCredentials, InputStream in, OutputStream out) throws IOException {
+  public SshSession attachTerminal(String sessionId, long authorizationDate, String authorization,
+      SshCredentials nodeCredentials, SshTerminalSettings settings, InputStream in,
+      OutputStream out) throws IOException {
     SshSession sess = sessionMap.get(sessionId);
     if (sess == null) {
       throw new AuthorizationException("Session " + sessionId + " not available");
@@ -198,13 +200,13 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     // TODO: extract node public key? by doing nothing, we have at least verified the 
     //       caller has authorization as a user for this node...
 
-    ClientSession clientSession = createClient(sess, nodeCredentials, in, out);
+    ClientSession clientSession = createClient(sess, nodeCredentials, settings, in, out);
     sess.setClientSession(clientSession);
     return sess;
   }
 
-  private ClientSession createClient(SshSession sess, SshCredentials credentials, InputStream in,
-      OutputStream out) throws IOException {
+  private ClientSession createClient(SshSession sess, SshCredentials credentials,
+      SshTerminalSettings settings, InputStream in, OutputStream out) throws IOException {
     SshClient client = SshClient.setUpDefaultClient();
 
     if (credentials.getKeyPair() != null) {
@@ -224,6 +226,18 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     session.auth().verify(30, TimeUnit.SECONDS);
 
     ChannelShell channel = session.createShellChannel();
+
+    if (settings != null) {
+      if (settings.getType() != null) {
+        channel.setPtyType(settings.getType());
+      }
+      channel.setPtyColumns(settings.getCols());
+      channel.setPtyLines(settings.getLines());
+      channel.setPtyWidth(settings.getWidth());
+      channel.setPtyHeight(settings.getHeight());
+      settings.getEnvironment().forEach((k, v) -> channel.setEnv(k, v));
+    }
+
     channel.addCloseFutureListener(new SshFutureListener<CloseFuture>() {
 
       @Override
