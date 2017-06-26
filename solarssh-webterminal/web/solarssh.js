@@ -34,12 +34,22 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var self = { version : '0.1.0' };
 	var helper = sn.net.securityHelper();
 	var config = (options || {});
+	var sshCredentialsDialog;
 	var terminal;
 
 	var session;
 	var socket;
 	var socketState = 0;
 	var setupGuiWindow;
+
+	function sshCredentialsDialog(value) {
+		if ( !arguments.length ) return sshCredentialsDialog;
+		sshCredentialsDialog = value;
+		if ( value ) {
+			value.addEventListener('close', handleSshCredentials);
+		}
+		return self;
+	}
 
 	function reset() {
 		if ( setupGuiWindow ) {
@@ -148,8 +158,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		helper.token(d3.select('input[name=token]').property('value'));
 		helper.secret(d3.select('input[name=secret]').property('value'));
 		enableSubmit(false);
-		console.log('connect using token %s', helper.token());
-		createSession();
+		requestSshCredentials();
 	}
 
 	function createSession() {
@@ -303,6 +312,19 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		executeQuery();
 	}
 
+	function requestSshCredentials() {
+		sshCredentialsDialog.showModal();
+	}
+
+	function handleSshCredentials(event) {
+		if ( sshCredentialsDialog.returnValue === 'login' ) {
+			console.log('connect using token %s', helper.token());
+			createSession();
+		} else {
+			enableSubmit(true);
+		}
+	}
+
 	function connectWebSocket() {
 		terminal.write('Attaching to SSH session... ');
 		var url = webSocketURL() +'?sessionId=' +session.sessionId;
@@ -314,7 +336,6 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function webSocketOpen(event) {
-		// send
 		var authorization = helper.computeAuthorization(
 			nodeUrlHelper.viewNodeMetadataURL(),
 			'GET',
@@ -322,14 +343,16 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			undefined,
 			new Date()
 		);
-
+		var dialog = d3.select(sshCredentialsDialog);
+		var username = dialog.select('input[type=text]').property('value');
+		var password = dialog.select('input[type=password]').property('value');
 		var msg = {
 			cmd: "attach-ssh",
 			data: {
 				'authorization': authorization.header,
 				'authorization-date': authorization.date.getTime(),
-				'username': 'solar', // TODO
-				'password': 'solar', // TODO
+				'username': username,
+				'password' : password,
 			}
 		};
 
@@ -390,6 +413,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		return Object.defineProperties(self, {
 			start: { value: start },
 			stop: { value: stop },
+			sshCredentialsDialog: { value: sshCredentialsDialog },
 		});
 	}
 
@@ -412,7 +436,11 @@ function startApp(env) {
 
 	setupUI(env);
 
+	var sshCredDialog = document.getElementById('ssh-credentials-dialog');
+	dialogPolyfill.registerDialog(sshCredDialog);
+
 	app = solarSshApp(sn.api.node.nodeUrlHelper(env.nodeId, env), env)
+		.sshCredentialsDialog(sshCredDialog)
 		.start();
 
 	window.onbeforeunload = function() {

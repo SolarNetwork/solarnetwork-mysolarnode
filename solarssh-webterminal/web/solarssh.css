@@ -38,9 +38,37 @@ h1 {
     flex-grow: 1;
 }
 
+h2 {
+    color: white;
+    font-family: inherit;
+    font-weight: 500;
+	margin: 0 0 0.5em 0;
+	font-size: 1.0em;
+    text-rendering: optimizelegibility;
+}
+
 a {
 	color: #BEE6F0;
 	text-decoration: none;
+}
+
+dialog {
+	background-color: rgba(34,175,176,1.0) !important;
+	background: -webkit-linear-gradient(top, rgba(104,144,173,1) 0%,rgba(102,126,153,1) 100%) no-repeat center center fixed !important;
+	background: -moz-linear-gradient(top, rgba(104,144,173,1) 0%,rgba(102,126,153,1) 100%) no-repeat center center fixed !important;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+	border: 1px solid #1587d4 !important;
+	color: white !important;
+}
+
+dialog::backdrop { /* native */
+  background-color: rgba(0,0,0,0.6) !important;
+}
+dialog + .backdrop { /* polyfill */
+  background-color: rgba(0,0,0,0.6) !important;
 }
 
 input {
@@ -48,6 +76,9 @@ input {
 	border-bottom: 2px solid #666;
 	background: none;
 	padding-bottom: 2px;
+	min-height: 32px;
+	font-size: 1rem;
+	color: #fce94f;
 }
 
 input:focus {
@@ -59,6 +90,7 @@ button {
 	background-color: #fce94f;
 	border: none;
 	min-width: 4em;
+	min-height: 40px;
 }
 
 button:disabled {
