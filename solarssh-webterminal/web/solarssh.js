@@ -56,6 +56,17 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		if ( setupGuiWindow ) {
 			setupGuiWindow = undefined;
 		}
+		resetWebSocket();
+		session = undefined;
+		if ( terminal ) {
+			terminal.clear();
+			termWriteGreeting();
+		}
+		sshCredentials = undefined;
+		enableSubmit(true);
+	}
+
+	function resetWebSocket() {
 		if ( socket ) {
 			if ( terminal ) {
 				terminal.detach(socket);
@@ -64,13 +75,6 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			socket = undefined;
 		}
 		socketState = 0;
-		session = undefined;
-		if ( terminal ) {
-			terminal.clear();
-			termWriteGreeting();
-		}
-		sshCredentials = undefined;
-		enableSubmit(true);
 	}
 
 	function hostURL() {
@@ -234,10 +238,8 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function stopSession() {
 		if ( socket && terminal ) {
-			terminal.detach(socket);
+			resetWebSocket();
 			terminal.writeln('');
-			socket.close();
-			socket = undefined;
 		}
 		var url = baseURL() + '/session/' +session.sessionId +'/stop';
 		var authorization = helper.computeAuthorization(
@@ -331,9 +333,17 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			var username = dialog.select('input[type=text]').property('value');
 			var password = dialog.select('input[type=password]').property('value');
 			sshCredentials = {username: username, password: password};
+		} else {
+			sshCredentials = undefined;
 		}
 		// if did not provide credentials, we will not connect the websocket
-		createSession();
+		if ( !session ) {
+			createSession();
+		} else if ( sshCredentials && !socket ) {
+			// re-use existing session
+			terminal.writeln('');
+			connectWebSocket();
+		}
 	}
 
 	function connectWebSocket() {
@@ -371,8 +381,22 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function webSocketClose(event) {
-		console.log('ws close event: %s', JSON.stringify(event));
-		socket = undefined;
+		console.log('ws close event: code = %d; reason = %s', event.code, event.reason);
+		resetWebSocket();
+		if ( event.code === 1000 ) {
+			// CLOSE_NORMAL
+			if ( terminal ) {
+				terminal.writeln('Use the '
+					+termEscapedText(ansiEscapes.color.bright.yellow, 'Connect')
+					+' button to reconnect via SSH.');
+				terminal.writeln('The '
+					+termEscapedText(ansiEscapes.color.bright.yellow, 'Setup')
+					+' button can still be used to view the SolarNode setup GUI.');
+			}
+		} else if ( terminal ) {
+			terminal.writeln('Connection closed: ' +event.reason);
+		}
+		enableSubmit(true, true); // re-enable just the Connect button
 	}
 
 	function webSocketError(event) {
