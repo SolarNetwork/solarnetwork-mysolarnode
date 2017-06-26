@@ -153,7 +153,7 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
 
       wsInputSink = new OutputStreamWriter(pipeOut, "UTF-8");
 
-      OutputStream sshStdout = new AsyncTextOutputStream(websocketSession.getAsyncRemote());
+      OutputStream sshStdout = new AsyncTextOutputStream(websocketSession);
 
       SshSession session = solarSshService.registerClient(sshSession.getId(),
           ((Number) authDate).longValue(), auth.toString(), creds, sshStdin, sshStdout);

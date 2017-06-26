@@ -26,7 +26,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
+import javax.websocket.CloseReason;
 import javax.websocket.RemoteEndpoint.Async;
+import javax.websocket.Session;
 
 /**
  * Write websocket text messages as an OutputStream.
@@ -36,18 +38,21 @@ import javax.websocket.RemoteEndpoint.Async;
  */
 public class AsyncTextOutputStream extends OutputStream {
 
+  private final Session session;
   private final Async remote;
   private final Charset charset = Charset.forName("UTF-8");
 
   /**
-   * Wraps an {@link Async} as an {@link OutputStream}.
+   * Wraps a websocket {@code Session} as a text-oriented {@link OutputStream} using the socket's
+   * {@code RemoteEndpoint.Async} API.
    * 
-   * @param remote
-   *        the remote to wrap
+   * @param session
+   *        the session to wrap
    */
-  public AsyncTextOutputStream(Async remote) throws IOException {
+  public AsyncTextOutputStream(Session session) throws IOException {
     super();
-    this.remote = remote;
+    this.session = session;
+    this.remote = session.getAsyncRemote();
     remote.setBatchingAllowed(true);
   }
 
@@ -72,9 +77,12 @@ public class AsyncTextOutputStream extends OutputStream {
     remote.flushBatch();
   }
 
+  /**
+   * Close the output stream, and close the websocket session.
+   */
   @Override
   public void close() throws IOException {
-    // TODO: close session?
+    session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, "Connection closed"));
   }
 
 }

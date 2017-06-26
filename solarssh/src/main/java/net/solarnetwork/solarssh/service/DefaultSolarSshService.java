@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelShell;
 import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.future.CloseFuture;
+import org.apache.sshd.common.future.SshFutureListener;
 import org.apache.sshd.common.keyprovider.KeyPairProvider;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.util.io.NoCloseInputStream;
@@ -222,6 +224,18 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     session.auth().verify(30, TimeUnit.SECONDS);
 
     ChannelShell channel = session.createShellChannel();
+    channel.addCloseFutureListener(new SshFutureListener<CloseFuture>() {
+
+      @Override
+      public void operationComplete(CloseFuture future) {
+        sess.setClientSession(null);
+        try {
+          out.close();
+        } catch (IOException e) {
+          log.debug("Error closing SSH output stream: {}", e.getMessage());
+        }
+      }
+    });
     channel.setIn(new NoCloseInputStream(in));
 
     OutputStream channelOut = new NoCloseOutputStream(out);
