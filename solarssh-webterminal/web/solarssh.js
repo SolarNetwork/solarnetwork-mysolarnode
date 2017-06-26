@@ -133,20 +133,22 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		socketState = 0;
 	}
 
-	function hostURL() {
+	function hostUrl() {
 		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost);
 	}
 
-	function baseURL() {
-		return (hostURL() +config.solarSshPath +'/api/v1/ssh');
+	function baseUrl() {
+		return (hostUrl() +config.solarSshPath +'/api/v1/ssh');
 	}
 
-	function webSocketURL() {
-		return ('ws' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost +config.solarSshPath +'/ssh');
+	function webSocketUrl() {
+		return ('ws' +(config.solarSshTls === true ? 's' : '') +'://'
+			+config.solarSshHost +config.solarSshPath +'/ssh');
 	}
 
-	function setupGuiURL() {
-		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost +config.solarSshPath +'/nodeproxy/' +session.sessionId);
+	function setupGuiUrl() {
+		return ('http' +(config.solarSshTls === true ? 's' : '') +'://'
+			+config.solarSshHost +config.solarSshPath +'/nodeproxy/' +session.sessionId +'/');
 	}
 
 	function enableSubmit(value, withoutCascade) {
@@ -225,7 +227,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function createSession() {
-		var url = baseURL() + '/session/new?nodeId=' +nodeUrlHelper.nodeId;
+		var url = baseUrl() + '/session/new?nodeId=' +nodeUrlHelper.nodeId;
 		var authorization = helper.computeAuthorization(
 			nodeUrlHelper.viewPendingInstructionsURL(),
 			'GET',
@@ -257,7 +259,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function startSession() {
-		var url = baseURL() + '/session/' +session.sessionId +'/start';
+		var url = baseUrl() + '/session/' +session.sessionId +'/start';
 		var authorization = helper.computeAuthorization(
 			nodeUrlHelper.queueInstructionURL('StartRemoteSsh', [
 				{name: 'host', value: session.host},
@@ -297,7 +299,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			resetWebSocket();
 			terminal.writeln('');
 		}
-		var url = baseURL() + '/session/' +session.sessionId +'/stop';
+		var url = baseUrl() + '/session/' +session.sessionId +'/stop';
 		var authorization = helper.computeAuthorization(
 			nodeUrlHelper.queueInstructionURL('StopRemoteSsh', [
 				{name: 'host', value: session.host},
@@ -356,6 +358,9 @@ var solarSshApp = function(nodeUrlHelper, options) {
 						if ( sshCredentials ) {
 							connectWebSocket();
 						} else {
+							terminal.writeln('Use the '
+								+termEscapedText(ansiEscapes.color.bright.yellow, 'Connect')
+								+' button to connect via SSH.');
 							enableSubmit(true, true); // re-enable just the Connect button to establish SSH later
 						}
 					} else if ( 'Declined' === state ) {
@@ -416,7 +421,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function connectWebSocket() {
 		terminal.write('Attaching to SSH session... ');
-		var url = webSocketURL() +'?sessionId=' +session.sessionId;
+		var url = webSocketUrl() +'?sessionId=' +session.sessionId;
 		socket = new WebSocket(url, 'solarssh');
 		socket.onopen = webSocketOpen;
 		socket.onmessage = webSocketMessage;
@@ -501,7 +506,11 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function launchSetupGui() {
-		setupGuiWindow = window.open(setupGuiURL());
+		if ( setupGuiWindow && !setupGuiWindow.closed ) {
+			setupGuiWindow.location = setupGuiUrl();
+		} else {
+			setupGuiWindow = window.open(setupGuiUrl());
+		}
 	}
 
 	/**
