@@ -86,6 +86,11 @@ input:focus {
 	padding-bottom: 0px;
 }
 
+input[type=text]:focus,
+input[type=password]:focus {
+	outline: none;
+}
+
 button {
 	background-color: #fce94f;
 	border: none;
