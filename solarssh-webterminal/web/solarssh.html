@@ -26,11 +26,13 @@
 	</footer>
 	<dialog id="ssh-credentials-dialog">
 		<form method="dialog">
-			<h2>Enter your SolarNode SSH credentials, or hit <kbd>Esc</kbd> to not activate SSH access:</h2>
+			<p>Enter your SolarNode SSH credentials, or use <b>Skip</b> (or type <kbd>Esc</kbd>)
+				to skip SSH access and only access the SolarNode Setup GUI.</p>
 			<input type="text" name="user" placeholder="Username" value="solar"
 				autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
 			<input type="password" name="pass" placeholder="Password" value="solar">
 			<button type="submit" value="login">Login</button>
+			<button type="submit" class="secondary" value="skip">Skip</button>
 		</form>
 	</dialog>
 	<script type="text/javascript" src="js-lib/d3.min.js"></script>

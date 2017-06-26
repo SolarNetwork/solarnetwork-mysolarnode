@@ -38,15 +38,6 @@ h1 {
     flex-grow: 1;
 }
 
-h2 {
-    color: white;
-    font-family: inherit;
-    font-weight: 500;
-	margin: 0 0 0.5em 0;
-	font-size: 1.0em;
-    text-rendering: optimizelegibility;
-}
-
 a {
 	color: #BEE6F0;
 	text-decoration: none;
@@ -68,11 +59,11 @@ dialog > form {
 	max-width: 480px;
 }
 
-input + input,
-input + button,
-button + button {
-	margin-left: 2px;
-	margin-right: 2px;
+dialog > from > p {
+    color: white;
+    font-family: inherit;
+    font-weight: 500;
+	margin: 0 0 0.5em 0;
 }
 
 dialog::backdrop { /* native */
@@ -102,6 +93,13 @@ input[type=password]:focus {
 	outline: none;
 }
 
+input + input,
+input + button,
+button + button {
+	margin-left: 2px;
+	margin-right: 2px;
+}
+
 button {
 	background-color: #fce94f;
 	border: none;
@@ -117,4 +115,9 @@ button:disabled {
 button.destructive {
 	background-color: #c00;
 	color: #fff;
+}
+
+button.secondary {
+	background-color: #fbfce4;
+	color: #333;
 }
