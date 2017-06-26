@@ -64,6 +64,10 @@ dialog {
 	color: white !important;
 }
 
+dialog > form {
+	max-width: 480px;
+}
+
 dialog::backdrop { /* native */
   background-color: rgba(0,0,0,0.6) !important;
 }
