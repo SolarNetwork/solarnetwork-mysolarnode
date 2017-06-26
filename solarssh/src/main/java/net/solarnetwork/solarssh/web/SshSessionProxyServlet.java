@@ -22,18 +22,26 @@
 
 package net.solarnetwork.solarssh.web;
 
-import java.util.Collections;
+import static java.util.Collections.singletonList;
+
+import java.net.HttpCookie;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.mitre.dsmiley.httpproxy.ProxyServlet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.solarnetwork.solarssh.domain.SshSession;
 
@@ -46,6 +54,8 @@ import net.solarnetwork.solarssh.domain.SshSession;
 public class SshSessionProxyServlet extends ProxyServlet {
 
   private static final long serialVersionUID = 1273522570866832919L;
+
+  private static final Logger LOG = LoggerFactory.getLogger(SshSessionProxyServlet.class);
 
   private final SshSession session;
   private final ServletConfig servletConfig;
@@ -93,8 +103,36 @@ public class SshSessionProxyServlet extends ProxyServlet {
 
   @Override
   protected HttpClient createHttpClient(RequestConfig requestConfig) {
-    return HttpClientBuilder.create().setDefaultRequestConfig(requestConfig).setDefaultHeaders(
-        Collections.singletonList(new BasicHeader("X-Forwarded-Path", proxyPath))).build();
+    // @formatter:off
+    return HttpClientBuilder.create()
+        .setDefaultRequestConfig(requestConfig)
+        .setDefaultHeaders(singletonList(new BasicHeader("X-Forwarded-Path", proxyPath)))
+        .setConnectionTimeToLive(1, TimeUnit.MINUTES)
+        .disableCookieManagement()
+        .disableRedirectHandling()
+        .build();
+    // @formatter:on
+  }
+
+  @Override
+  protected void copyProxyCookie(HttpServletRequest servletRequest,
+      HttpServletResponse servletResponse, String headerValue) {
+    List<HttpCookie> cookies = HttpCookie.parse(headerValue);
+    String path = proxyPath;
+    if (!path.endsWith("/")) {
+      path += "/";
+    }
+    for (HttpCookie cookie : cookies) {
+      Cookie responseCookie = new Cookie(cookie.getName(), cookie.getValue());
+      responseCookie.setComment(cookie.getComment());
+      responseCookie.setMaxAge((int) cookie.getMaxAge());
+      responseCookie.setPath(path);
+      responseCookie.setHttpOnly(cookie.isHttpOnly());
+      responseCookie.setSecure(cookie.getSecure());
+      responseCookie.setVersion(cookie.getVersion());
+      LOG.debug("Remapped cookie {} path to {}", cookie, proxyPath);
+      servletResponse.addCookie(responseCookie);
+    }
   }
 
   @Override
@@ -141,6 +179,9 @@ public class SshSessionProxyServlet extends ProxyServlet {
 
       case ProxyServlet.P_CONNECTTIMEOUT:
         return "30000";
+
+      case ProxyServlet.P_PRESERVECOOKIES:
+        return Boolean.TRUE.toString();
 
       default:
         return null;
