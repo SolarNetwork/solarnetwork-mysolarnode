@@ -23,6 +23,7 @@
 package net.solarnetwork.solarssh.web;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -30,7 +31,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.mitre.dsmiley.httpproxy.ProxyServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -56,7 +56,11 @@ import net.solarnetwork.solarssh.domain.SshSession;
 public class SolarSshHttpProxyController {
 
   private final SshSessionDao sessionDao;
-  private final ConcurrentMap<String, ProxyServlet> sessionProxyMap = new ConcurrentHashMap<>();
+
+  // @formatter:off
+  private final ConcurrentMap<String, SshSessionProxyServlet> sessionProxyMap 
+      = new ConcurrentHashMap<>();
+  // @formatter:on
 
   private static final Logger LOG = LoggerFactory.getLogger(SolarSshHttpProxyController.class);
 
@@ -73,9 +77,9 @@ public class SolarSshHttpProxyController {
       RequestMethod.POST, RequestMethod.PUT, RequestMethod.TRACE })
   public void nodeProxy(@PathVariable("sessionId") String sessionId, HttpServletRequest req,
       HttpServletResponse resp) throws IOException, ServletException {
-    ProxyServlet proxy = sessionProxyMap.computeIfAbsent(sessionId, k -> {
+    SshSessionProxyServlet proxy = sessionProxyMap.computeIfAbsent(sessionId, k -> {
       SshSession session = sessionDao.findOne(sessionId);
-      if (session == null) {
+      if (session == null || !session.isEstablished()) {
         throw new AuthorizationException("SshSession not available");
       }
       SshSessionProxyServlet s = new SshSessionProxyServlet(session,
@@ -89,6 +93,26 @@ public class SolarSshHttpProxyController {
     });
     LOG.debug("Context path: {}; requestURI: {}", req.getContextPath(), req.getRequestURI());
     proxy.service(req, resp);
+  }
+
+  /**
+   * Call periodically to non-established sessions.
+   */
+  public void cleanupExpiredSessions() {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Examining {} HTTP proxy sessions for expiration", sessionProxyMap.size());
+    }
+    for (Iterator<SshSessionProxyServlet> itr = sessionProxyMap.values().iterator(); itr
+        .hasNext();) {
+      SshSessionProxyServlet servlet = itr.next();
+      SshSession sess = servlet.getSession();
+      if (!sess.isEstablished()) {
+        LOG.info("Expiring unestablished SshSessionProxyServlet {}: node {}, rport {}",
+            sess.getId(), sess.getNodeId(), sess.getReverseSshPort());
+        itr.remove();
+        servlet.destroy();
+      }
+    }
   }
 
   /**

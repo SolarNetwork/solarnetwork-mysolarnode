@@ -147,4 +147,13 @@ public class SshSessionProxyServlet extends ProxyServlet {
     }
   }
 
+  /**
+   * Get the session this proxy is associated with.
+   * 
+   * @return the session
+   */
+  public SshSession getSession() {
+    return session;
+  }
+
 }
