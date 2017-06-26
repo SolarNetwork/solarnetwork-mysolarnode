@@ -41,6 +41,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var socket;
 	var socketState = 0;
 	var setupGuiWindow;
+	var sshCredentials;
 
 	function sshCredentialsDialog(value) {
 		if ( !arguments.length ) return sshCredentialsDialog;
@@ -68,6 +69,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			terminal.clear();
 			termWriteGreeting();
 		}
+		sshCredentials = undefined;
 		enableSubmit(true);
 	}
 
@@ -87,9 +89,9 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		return ('http' +(config.solarSshTls === true ? 's' : '') +'://' +config.solarSshHost +config.solarSshPath +'/nodeproxy/' +session.sessionId);
 	}
 
-	function enableSubmit(value) {
+	function enableSubmit(value, withoutCascade) {
 		d3.select('#connect').property('disabled', !value);
-		if ( value ) {
+		if ( value && !withoutCascade ) {
 			enableSetupGui(false);
 			enableEnd(false);
 		}
@@ -158,6 +160,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		helper.token(d3.select('input[name=token]').property('value'));
 		helper.secret(d3.select('input[name=secret]').property('value'));
 		enableSubmit(false);
+		console.log('connect using token %s', helper.token());
 		requestSshCredentials();
 	}
 
@@ -288,7 +291,13 @@ var solarSshApp = function(nodeUrlHelper, options) {
 						// off to the races!
 						terminal.write(' ');
 						termWriteSuccess();
-						connectWebSocket();
+						enableSetupGui(true);
+						terminal.writeln('Use the '
+							+termEscapedText(ansiEscapes.color.bright.yellow, 'Setup')
+							+' button to view the SolarNode setup GUI.');
+						if ( sshCredentials ) {
+							connectWebSocket();
+						}
 					} else if ( 'Declined' === state ) {
 						// bummer!
 						terminal.write(' ');
@@ -318,11 +327,13 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function handleSshCredentials(event) {
 		if ( sshCredentialsDialog.returnValue === 'login' ) {
-			console.log('connect using token %s', helper.token());
-			createSession();
-		} else {
-			enableSubmit(true);
+			var dialog = d3.select(sshCredentialsDialog);
+			var username = dialog.select('input[type=text]').property('value');
+			var password = dialog.select('input[type=password]').property('value');
+			sshCredentials = {username: username, password: password};
 		}
+		// if did not provide credentials, we will not connect the websocket
+		createSession();
 	}
 
 	function connectWebSocket() {
@@ -361,6 +372,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function webSocketClose(event) {
 		console.log('ws close event: %s', JSON.stringify(event));
+		socket = undefined;
 	}
 
 	function webSocketError(event) {
@@ -377,11 +389,9 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			termWriteSuccess();
 			socketState = 1;
 			terminal.attach(socket);
-			enableSetupGui(true);
 		} else {
 			termWriteFailed();
 			termWriteBrightRed('Failed to attach to SSH session: ' +event.data, true);
-			enableSubmit(true);
 			socket.close();
 		}
 	}
