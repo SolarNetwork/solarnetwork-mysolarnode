@@ -15,18 +15,37 @@
     <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
       <fileNamePattern>logs/solarssh-audit.%i.log.zip</fileNamePattern>
       <minIndex>1</minIndex>
-      <maxIndex>50</maxIndex>
+      <maxIndex>21</maxIndex>
     </rollingPolicy>
 
     <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-      <maxFileSize>1MB</maxFileSize>
+      <maxFileSize>2MB</maxFileSize>
     </triggeringPolicy>
     <encoder>
       <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level : %msg%n</pattern>
     </encoder>
   </appender>
 
-  <logger name="SolarSshService.AUDIT" level="info">
+  <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>logs/solarssh.log</file>
+    <append>true</append>
+    <immediateFlush>false</immediateFlush>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+      <fileNamePattern>logs/solarssh.%i.log.zip</fileNamePattern>
+      <minIndex>1</minIndex>
+      <maxIndex>21</maxIndex>
+    </rollingPolicy>
+
+    <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+      <maxFileSize>2MB</maxFileSize>
+    </triggeringPolicy>
+    <encoder>
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level  %-40.40logger{39}: %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <logger name="SolarSshService.AUDIT" level="info" additivity="false">
     <appender-ref ref="AUDIT" />
   </logger>
   
@@ -34,5 +53,6 @@
 
   <root level="warn">
     <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
   </root>
 </configuration>
