@@ -66,7 +66,6 @@ import net.solarnetwork.util.JsonUtils;
  */
 public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
-  private static final Logger AUDIT_LOG = LoggerFactory.getLogger("SshSession.AUDIT");
   private static final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
 
   private static final String REVERSE_PORT_PARAM = "rport";
@@ -93,6 +92,14 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   public DefaultSolarSshService(SolarNetClient solarNetClient) {
     super();
     this.solarNetClient = solarNetClient;
+  }
+
+  /**
+   * Initialize the service after all properties configured.
+   */
+  public void init() {
+    log.info("SolarSshService configured as host {}:{} using local ports {}:{}", host, port,
+        minPort, maxPort);
   }
 
   @Override
@@ -150,7 +157,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
             log.info("SshSession {} created: node {}, rport {}", sessionId, nodeId, rport);
             Map<String, Object> auditProps = sess.auditEventMap("NEW");
             auditProps.put("date", sess.getCreated());
-            AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+            SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
             return sess;
           }
         } catch (SocketException e) {
@@ -298,7 +305,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     Map<String, Object> auditProps = sess.auditEventMap("END");
     auditProps.put("date", now);
     auditProps.put("duration", secs);
-    AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+    SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
     sess.setEstablished(false);
   }
 

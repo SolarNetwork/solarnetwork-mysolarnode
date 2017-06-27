@@ -95,6 +95,13 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
 
   }
 
+  /**
+   * Initialize the service after all properties configured.
+   */
+  public void init() {
+    log.info("SolarNetClient configured with API url {}", apiBaseUrl);
+  }
+
   private URI apiUri(String path) {
     URI uri;
     try {

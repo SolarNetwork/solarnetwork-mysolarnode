@@ -79,7 +79,7 @@ public class ServiceConfig {
    * 
    * @return the service
    */
-  @Bean
+  @Bean(initMethod = "init")
   public DefaultSolarSshService solarSshService() {
     DefaultSolarSshService service = new DefaultSolarSshService(solarNetClient());
     service.setHost(sshHost);
@@ -105,7 +105,7 @@ public class ServiceConfig {
    * 
    * @return the client
    */
-  @Bean
+  @Bean(initMethod = "init")
   public SolarNetClient solarNetClient() {
     DefaultSolarNetClient client = new DefaultSolarNetClient();
     client.setApiBaseUrl(solarNetBaseUrl);
