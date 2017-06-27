@@ -154,11 +154,13 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
 
   @Override
   public void sessionClosed(Session session) {
-    LOG.info("Session {} closed", session.getUsername());
     String sessionId = session.getUsername();
-    SshSession sess = sessionDao.findOne(sessionId);
-    if (sess != null) {
-      sessionDao.delete(sess);
+    if (sessionId != null) {
+      LOG.info("Session {} closed", session.getUsername());
+      SshSession sess = sessionDao.findOne(sessionId);
+      if (sess != null) {
+        sessionDao.delete(sess);
+      }
     }
   }
 
