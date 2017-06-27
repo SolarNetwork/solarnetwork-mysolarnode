@@ -317,7 +317,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			.on('load', handleStopSession)
 			.on('error', function(xhr) {
 				console.error('Failed to stop session: %s', xhr.responseText);
-				enableSubmit(true);
+				reset();
 			});
 	}
 
