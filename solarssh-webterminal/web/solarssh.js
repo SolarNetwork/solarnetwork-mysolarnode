@@ -1,18 +1,26 @@
 /**
  * @require d3 3.0
  * @require queue 1.0
- * @require solarnetwork-d3 0.2.0
+ * @require solarnetwork-d3 0.14.0
  * @require xterm 2.7
  */
 
 (function(window) {
 'use strict';
 
-var devEnv = {
-	// comment out these for production
+var forceEnv = {
+	// uncomment these for production
+	tls: true,
+
+	/* comment out these for production
 	debug: true,
 	tls: false,
 	host: 'solarnetworkdev.net:8680'
+	nodeId : 167,
+	solarSshHost: 'solarnetworkdev.net:8080',
+	solarSshPath: '/solarssh',
+	solarSshTls: false,
+	*/
 };
 
 var ansiEscapes = {
@@ -573,11 +581,12 @@ function setupUI(env) {
 
 function startApp(env) {
 	if ( !env ) {
-		env = sn.util.copy(devEnv, sn.util.copy(sn.env, {
-			nodeId : 167,
-			solarSshHost: 'solarnetworkdev.net:8080',
-			solarSshPath: '/solarssh',
-			solarSshTls: false,
+		env = sn.util.copy(forceEnv, sn.util.copy(sn.env, {
+			nodeId: 246,
+			tls: true,
+			solarSshHost: 'ssh.solarnetwork.net:8443',
+			solarSshPath: '',
+			solarSshTls: true,
 		}));
 	}
 
