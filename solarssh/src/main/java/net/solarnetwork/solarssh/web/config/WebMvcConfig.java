@@ -47,7 +47,7 @@ public class WebMvcConfig extends WebMvcConfigurerAdapter {
   @Autowired
   private SolarSshHttpProxyController httpProxyController;
 
-  @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs:60000}")
+  @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs}")
   public void cleanupExpiredSessions() {
     httpProxyController.cleanupExpiredSessions();
   }
