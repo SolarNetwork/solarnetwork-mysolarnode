@@ -78,6 +78,17 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
     this.solarSshService = solarSshService;
   }
 
+  /**
+   * Open a websocket connection.
+   * 
+   * <p>
+   * When opening the connection, the ID of the session to connect to must be provided on a
+   * <code>sessionId</code> query parameter. As long as a session exists with that ID, the websocket
+   * will be allowed to connect.
+   * </p>
+   * 
+   * {@inheritDoc}
+   */
   @Override
   public void onOpen(Session session, EndpointConfig config) {
     Map<String, List<String>> params = session.getRequestParameterMap();
@@ -113,6 +124,69 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
     LOG.warn("Websocket error; {}", sshSession, thr);
   }
 
+  /**
+   * Process a text message from the websocket.
+   * 
+   * <p>
+   * The first text message sent from any client <em>must</em> be a JSON object with authentication
+   * details provided for the session. If the authentication succeeds, all subsequent text messages
+   * will be sent directly to the remote shell associated with the session, and all text generated
+   * by the remote shell will be sent back as text messages.
+   * </p>
+   * 
+   * <h3>Authentication</h3>
+   * 
+   * <p>
+   * The JSON payload must be an object with the following properties:
+   * </p>
+   * 
+   * <dl>
+   * <dt>{@literal cmd}</dt>
+   * <dd>Must be equal to the string {@literal attach-ssh}.</dd>
+   * <dt>{@literal data}</dt>
+   * <dd>A nested object with authentication details and optional terminal settings.</dd>
+   * </dl>
+   * 
+   * <p>
+   * The {@literal data} object must be an object with the following properties:
+   * </p>
+   * 
+   * <dl>
+   * <dt>{@literal authorization}</dt>
+   * <dd>A SNWS2 authorization header string, suitable for passing to the
+   * {@link SolarSshService#attachTerminal} method.</dd>
+   * <dt>{@literal authorization-date}</dt>
+   * <dd>The authorization date as a number, as milliseconds since the epoch.</dd>
+   * <dt>{@literal username}</dt>
+   * <dd>A string node SSH username to use when attaching the remote shell terminal.</dd>
+   * <dt>{@literal password}</dt>
+   * <dd>A string node SSH password to use when attaching the remote shell terminal.</dd>
+   * </dl>
+   * 
+   * <p>
+   * In addition, the following optional properties may be provided:
+   * </p>
+   * 
+   * <dl>
+   * <dt>{@literal term}</dt>
+   * <dd>A string value to pass as the remote shell terminal type. Defaults to
+   * {@literal xterm}.</dd>
+   * <dt>{@literal cols}</dt>
+   * <dd>A number for the number of columns to use for the remote shell terminal. Defaults to
+   * {@literal 100}.</dd>
+   * <dt>{@literal lines}</dt>
+   * <dd>The number of lines to use for the remote shell terminal. Defaults to {@literal 24}.</dd>
+   * <dt>{@literal width}</dt>
+   * <dd>A number width in pixels to use for the remote shell terminal. Defaults to
+   * {@literal 640}.</dd>
+   * <dt>{@literal height}</dt>
+   * <dd>A number height in pixels to use for the remote shell terminal. Defaults to
+   * {@literal 480}.</dd>
+   * <dt>{@literal environment}</dt>
+   * <dd>An object whose key/value pairs will be passed as environment variables on the remote
+   * shell.</dd>
+   * </dl>
+   */
   @Override
   public void onMessage(String msg) {
     if (wsInputSink != null) {
