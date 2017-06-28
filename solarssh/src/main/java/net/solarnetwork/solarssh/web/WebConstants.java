@@ -35,6 +35,11 @@ public final class WebConstants {
    */
   public static final String PRESIGN_AUTHORIZATION_HEADER = "X-SN-PreSignedAuthorization";
 
+  /**
+   * A websocket sub-protocol for establishing a connection to a remote shell terminal.
+   */
+  public static final String SOLARSSH_WEBSOCKET_PROTOCOL = "solarssh";
+
   private WebConstants() {
     // do not construct
   }
