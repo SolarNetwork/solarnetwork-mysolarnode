@@ -44,7 +44,7 @@ var app;
  * @class
  */
 var solarSshApp = function(nodeUrlHelper, options) {
-	var self = { version : '0.1.0' };
+	var self = { version : '0.2.0' };
 	var helper = sn.net.securityHelper();
 	var config = (options || {});
 	var sshCredentialsDialog;
@@ -375,7 +375,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 						// bummer!
 						terminal.write(' ');
 						termWriteFailed();
-						enableSubmit(true);
+						setTimeout(stopSession, 1000);
 					} else {
 						// still waiting... try again in a little bit
 						terminal.write('.');
