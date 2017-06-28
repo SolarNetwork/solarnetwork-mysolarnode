@@ -582,7 +582,7 @@ function setupUI(env) {
 function startApp(env) {
 	if ( !env ) {
 		env = sn.util.copy(forceEnv, sn.util.copy(sn.env, {
-			nodeId: 246,
+			nodeId: 251,
 			tls: true,
 			solarSshHost: 'ssh.solarnetwork.net:8443',
 			solarSshPath: '',
