@@ -173,7 +173,7 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
    * {@literal xterm}.</dd>
    * <dt>{@literal cols}</dt>
    * <dd>A number for the number of columns to use for the remote shell terminal. Defaults to
-   * {@literal 100}.</dd>
+   * {@literal 80}.</dd>
    * <dt>{@literal lines}</dt>
    * <dd>The number of lines to use for the remote shell terminal. Defaults to {@literal 24}.</dd>
    * <dt>{@literal width}</dt>
