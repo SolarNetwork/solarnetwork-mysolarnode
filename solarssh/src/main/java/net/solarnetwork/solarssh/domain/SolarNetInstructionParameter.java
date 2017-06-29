@@ -79,8 +79,8 @@ public class SolarNetInstructionParameter {
   }
 
   /**
-   * Compare two {@link InstructionParameter} objects for equality. Only the {@code name} property
-   * is used for comparison.
+   * Compare two {code SolarNetInstructionParameter} objects for equality. Only the {@code name}
+   * property is used for comparison.
    */
   @Override
   public boolean equals(Object obj) {

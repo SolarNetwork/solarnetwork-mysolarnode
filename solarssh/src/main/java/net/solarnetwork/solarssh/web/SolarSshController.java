@@ -66,6 +66,14 @@ public class SolarSshController {
 
   /**
    * Request an unused reverse SSH port.
+   * 
+   * @param nodeId
+   *        the node ID to create the session for
+   * @param request
+   *        the request
+   * @return the created session
+   * @throws IOException
+   *         if any communication error occurs
    */
   @RequestMapping(value = "/session/new", method = RequestMethod.GET)
   public Response<SshSession> createNewSession(@RequestParam("nodeId") Long nodeId,
@@ -79,6 +87,14 @@ public class SolarSshController {
 
   /**
    * Issue a {@literal StartRemoteSsh} instruction and start the reverse SSH connection.
+   * 
+   * @param sessionId
+   *        the SSH session ID
+   * @param request
+   *        the request
+   * @return the updated session
+   * @throws IOException
+   *         if any communication error occurs
    */
   @RequestMapping(value = "/session/{sessionId}/start", method = RequestMethod.GET)
   public Response<SshSession> startSession(@PathVariable("sessionId") String sessionId,
@@ -92,6 +108,14 @@ public class SolarSshController {
 
   /**
    * Issue a {@literal StopRemoteSsh} instruction and stop the reverse SSH connection.
+   * 
+   * @param sessionId
+   *        the SSH session ID
+   * @param request
+   *        the request
+   * @return the updated session
+   * @throws IOException
+   *         if any communication error occurs
    */
   @RequestMapping(value = "/session/{sessionId}/stop", method = RequestMethod.GET)
   public Response<SshSession> stopSession(@PathVariable("sessionId") String sessionId,
@@ -103,12 +127,26 @@ public class SolarSshController {
     return Response.response(session);
   }
 
+  /**
+   * Handle an IOException.
+   * 
+   * @param e
+   *        the exception
+   * @return the response
+   */
   @ExceptionHandler(IOException.class)
   public ResponseEntity<Response<Object>> ioException(IOException e) {
     return new ResponseEntity<Response<Object>>(
         new Response<Object>(Boolean.FALSE, "570", e.getMessage(), null), HttpStatus.BAD_GATEWAY);
   }
 
+  /**
+   * Handle an AuthorizationException.
+   * 
+   * @param e
+   *        the exception
+   * @return the response
+   */
   @ExceptionHandler(AuthorizationException.class)
   public ResponseEntity<Response<Object>> ioException(AuthorizationException e) {
     return new ResponseEntity<Response<Object>>(
