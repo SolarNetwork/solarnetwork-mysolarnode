@@ -15,7 +15,7 @@ a SolarNode using the [SolarSSH Web Terminal][solarssh-webterm] webapp.
 Here's a diagram that shows how the various components involved with SolarSSH
 initiate network connections, and the protocols used:
 
-![netconn](src/docs/solarssh-network-connections.svg)
+![netconn](src/docs/solarssh-network-connections.png)
 
 As you can see, no component initiates a network connection _to_ SolarNode.
 Instead, all traffic is tunneled to SolarNode over the SSH connection it
