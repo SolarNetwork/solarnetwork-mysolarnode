@@ -22,6 +22,9 @@
 
 package net.solarnetwork.solarssh.domain;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.sshd.client.session.ClientSession;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -44,6 +47,7 @@ public class SshSession {
   private final String sshHost;
   private final int sshPort;
   private final int reverseSshPort;
+  private final int reverseHttpPort;
 
   private boolean established;
   private Long startInstructionId;
@@ -65,9 +69,11 @@ public class SshSession {
    *        the SSH port for the node to connect to
    * @param reverseSshPort
    *        a reverse SSH port to use
+   * @param reverseHttpPort
+   *        a reverse HTTP port to use
    */
   public SshSession(long created, String id, Long nodeId, String sshHost, int sshPort,
-      int reverseSshPort) {
+      int reverseSshPort, int reverseHttpPort) {
     super();
     this.created = created;
     this.id = id;
@@ -75,6 +81,7 @@ public class SshSession {
     this.sshHost = sshHost;
     this.sshPort = sshPort;
     this.reverseSshPort = reverseSshPort;
+    this.reverseHttpPort = reverseHttpPort;
   }
 
   public boolean isEstablished() {
@@ -113,9 +120,15 @@ public class SshSession {
     return sshPort;
   }
 
+  @JsonIgnore
+  public int getReverseHttpPort() {
+    return reverseHttpPort;
+  }
+
   @Override
   public String toString() {
-    return "SshSession{id=" + id + ", reverseSshPort=" + reverseSshPort + "}";
+    return "SshSession{id=" + id + ", nodeId=" + nodeId + ", reverseSshPort=" + reverseSshPort
+        + "}";
   }
 
   public Long getStartInstructionId() {
@@ -142,6 +155,21 @@ public class SshSession {
   @JsonIgnore
   public void setClientSession(ClientSession clientSession) {
     this.clientSession = clientSession;
+  }
+
+  /**
+   * Get a Map of standard audit event properties.
+   * 
+   * @param eventName
+   *        the audit event name
+   * @return the properties
+   */
+  public Map<String, Object> auditEventMap(String eventName) {
+    Map<String, Object> map = new LinkedHashMap<>(8);
+    map.put("nodeId", nodeId);
+    map.put("sessionId", id);
+    map.put("event", eventName);
+    return map;
   }
 
   @Override

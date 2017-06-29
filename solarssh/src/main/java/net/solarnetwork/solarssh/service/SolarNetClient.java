@@ -43,7 +43,7 @@ public interface SolarNetClient {
    * <p>
    * The {@code authorization} should be a pre-computed SNWS2 authorization header, which must match
    * exactly a {@literal GET} request to the {@literal /solaruser/api/v1/sec/instr/viewPending} path
-   * using the provided authorization date, topic, node ID, and parameters.
+   * using the provided authorization date.
    * </p>
    * 
    * 
@@ -66,7 +66,9 @@ public interface SolarNetClient {
    * <p>
    * The {@code authorization} should be a pre-computed SNWS2 authorization header, which must match
    * exactly a {@literal POST} request to the {@literal /solaruser/api/v1/sec/instr/add} path using
-   * the provided authorization date, topic, node ID, and parameters.
+   * the provided authorization date, topic, node ID, and parameters. The parameters will be added
+   * to the instruction in iteration order, which must match the order of the parameters as encoded
+   * in {@code authorization}.
    * </p>
    * 
    * @param topic

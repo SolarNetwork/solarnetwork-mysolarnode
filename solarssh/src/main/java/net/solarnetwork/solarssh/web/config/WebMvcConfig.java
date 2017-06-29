@@ -22,10 +22,15 @@
 
 package net.solarnetwork.solarssh.web.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
+
+import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
 
 /**
  * WebMVC configuration.
@@ -36,6 +41,15 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 @EnableWebMvc
 @Configuration
 @ComponentScan(basePackages = { "net.solarnetwork.solarssh.web" })
+@EnableScheduling
 public class WebMvcConfig extends WebMvcConfigurerAdapter {
+
+  @Autowired
+  private SolarSshHttpProxyController httpProxyController;
+
+  @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs}")
+  public void cleanupExpiredSessions() {
+    httpProxyController.cleanupExpiredSessions();
+  }
 
 }

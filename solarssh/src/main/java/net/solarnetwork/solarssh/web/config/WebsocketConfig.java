@@ -30,6 +30,7 @@ import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 import org.springframework.web.socket.server.standard.ServerEndpointRegistration;
 
 import net.solarnetwork.solarssh.web.SolarSshEndpoint;
+import net.solarnetwork.solarssh.web.WebConstants;
 
 /**
  * Websocket configuration.
@@ -50,7 +51,7 @@ public class WebsocketConfig {
     return new ServerEndpointRegistration("/ssh", SolarSshEndpoint.class) {
 
       {
-        setSubprotocols(Collections.singletonList("solarssh"));
+        setSubprotocols(Collections.singletonList(WebConstants.SOLARSSH_WEBSOCKET_PROTOCOL));
       }
 
       @Override
