@@ -530,7 +530,8 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	 */
 	function start() {
 		terminal = new Terminal({
-			cols: 120,
+			cols: termSettings.cols,
+			rows: termSettings.lines,
 			tabStopWidth: 4
 		});
 		terminal.open(document.getElementById('terminal'), true);
