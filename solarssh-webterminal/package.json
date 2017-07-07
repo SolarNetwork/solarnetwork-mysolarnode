@@ -1,0 +1,44 @@
+{
+  "name": "solarssh-webterminal",
+  "version": "0.1.0",
+  "description": "SolarSSH Web Terminal",
+  "keywords": [
+    "solarnetwork",
+    "solarssh"
+  ],
+  "homepage": "https://github.com/SolarNetwork/solarnetwork-api-js/solarssh-webterminal/",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "Matt Magoffin",
+    "email": "matt@solarnetwork.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SolarNetwork/solarnetwork-mysolarnode.git"
+  },
+  "scripts": {
+    "start": "webpack-dev-server",
+    "build": "webpack",
+    "test": "ava"
+  },
+  "dependencies": {
+    "d3-request": "^1.0.5",
+    "d3-selection": "^1.1.0",
+    "dialog-polyfill": "^0.4.7",
+    "xterm": "^2.8.0"
+  },
+  "devDependencies": {
+    "ava": "^0.20.0",
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.1.1",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-module-resolver": "~3.0.0-beta.3",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-latest": "^6.24.1",
+    "babel-register": "^6.24.1",
+    "file-loader": "^0.11.2",
+    "html-webpack-plugin": "^2.29.0",
+    "uglify-js": "^3.0.23",
+    "webpack": "^3.1.0"
+  }
+}
