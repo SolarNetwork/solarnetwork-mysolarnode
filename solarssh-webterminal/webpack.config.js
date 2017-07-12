@@ -21,19 +21,26 @@ const config = {
       	test: /\.js$/,
       	exclude: /(node_modules|bower_components)/,
       	use: {
-			loader: 'babel-loader',
-			options: {
-              babelrc: false,
-			  presets: ['latest']
-			}
-      	}
+          loader: 'babel-loader',
+          options: {
+            babelrc: false,
+            presets: ['latest']
+          }
+        }
       },
       {test: /\.css$/, use: 'file-loader?name=css/[name].[ext]'},
       {test: /\.(gif|jpg|png)$/, use: 'file-loader?name=assets/[name].[ext]'},
     ]
   },
   plugins: [
-   // new webpack.optimize.UglifyJsPlugin({sourceMap: true}),
+    /* uri-js has Windows line endings, causing Uglify to fail :(
+    new webpack.optimize.UglifyJsPlugin({
+      comments: false,
+      compress: {
+        warnings: false
+      },
+      sourceMap: true,
+    }),*/
     new HtmlWebpackPlugin({template: './src/index.html'}),
   ]
 };
