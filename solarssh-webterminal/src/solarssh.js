@@ -1,11 +1,11 @@
 'use strict';
 
 import { Configuration,
-	NetAuthorizationV2Builder,
+	NetAuthorizationV2Builder as AuthorizationV2Builder,
 	NetEnvironment as Environment,
 	NodeInstructionUrlHelper,
 	InstructionState,
-	netUrlQuery } from 'solarnetwork-api';
+	netUrlQuery } from 'solarnetwork-core';
 import { select, selectAll } from 'd3-selection';
 import { json as jsonRequest } from 'd3-request';
 import dialogPolyfill from 'dialog-polyfill';
@@ -50,7 +50,7 @@ var app;
  */
 var solarSshApp = function(nodeUrlHelper, options) {
 	var self = { version : '0.2.0' };
-	var authBuilder = new NetAuthorizationV2Builder(null, nodeUrlHelper.environment);
+	var authBuilder = new AuthorizationV2Builder(null, nodeUrlHelper.environment);
 	var config = (options || {});
 	var env = nodeUrlHelper.environment;
 	var sshCredentialsDialog;

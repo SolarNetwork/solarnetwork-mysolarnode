@@ -15,6 +15,8 @@ const config = {
     compress: false,
     port: 9000
   },
+  resolve: { modules: ["node_modules", path.join(__dirname, "node_modules")] },
+  resolveLoader: { modules: ["node_modules", path.join(__dirname, "node_modules")] },
   module: {
     rules: [
       {
@@ -33,6 +35,7 @@ const config = {
               }],
             ],
             plugins: [
+              require('babel-plugin-transform-runtime'),
               [
                 "module-resolver",
                 {
@@ -41,7 +44,7 @@ const config = {
                   ],
                   "cwd": "packagejson"
                 }
-              ]
+              ],
             ]
           }
         }
