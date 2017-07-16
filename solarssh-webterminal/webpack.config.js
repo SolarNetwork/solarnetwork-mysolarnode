@@ -24,7 +24,25 @@ const config = {
           loader: 'babel-loader',
           options: {
             babelrc: false,
-            presets: ['latest']
+            presets: [
+              ['env', {
+                targets: {
+                  browsers: ['last 2 versions'],
+                  node: 'current',
+                },
+              }],
+            ],
+            plugins: [
+              [
+                "module-resolver",
+                {
+                  "root": [
+                    "./src"
+                  ],
+                  "cwd": "packagejson"
+                }
+              ]
+            ]
           }
         }
       },

@@ -34,7 +34,6 @@
     "babel-plugin-external-helpers": "^6.22.0",
     "babel-plugin-module-resolver": "~3.0.0-beta.3",
     "babel-preset-env": "^1.6.0",
-    "babel-preset-latest": "^6.24.1",
     "babel-register": "^6.24.1",
     "file-loader": "^0.11.2",
     "html-webpack-plugin": "^2.29.0",
