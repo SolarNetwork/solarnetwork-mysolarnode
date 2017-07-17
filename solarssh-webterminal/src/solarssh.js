@@ -1,11 +1,11 @@
 'use strict';
 
 import { Configuration,
-	NetAuthorizationV2Builder as AuthorizationV2Builder,
-	NetEnvironment as Environment,
+	AuthorizationV2Builder,
+	Environment,
 	NodeInstructionUrlHelper,
 	InstructionState,
-	netUrlQuery } from 'solarnetwork-core';
+	urlQuery } from 'solarnetwork-api-core';
 import { select, selectAll } from 'd3-selection';
 import { json as jsonRequest } from 'd3-request';
 import dialogPolyfill from 'dialog-polyfill';
@@ -579,7 +579,7 @@ export default function startApp(env) {
 		});
 	}
 
-	var config = new Configuration(Object.assign({nodeId:251}, netUrlQuery.urlQueryParse(window.location.search)));
+	var config = new Configuration(Object.assign({nodeId:251}, urlQuery.urlQueryParse(window.location.search)));
 
 	setupUI(config);
 
