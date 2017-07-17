@@ -188,6 +188,9 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
   }
 
   private String signedDateHeaderName(String authorization) {
+    if (authorization == null) {
+      throw new AuthorizationException("Authorization missing");
+    }
     Matcher signedHeaders = SIGNED_HEADERS_PATTERN.matcher(authorization);
     if (!signedHeaders.find()) {
       throw new AuthorizationException("SignedHeaders missing");
