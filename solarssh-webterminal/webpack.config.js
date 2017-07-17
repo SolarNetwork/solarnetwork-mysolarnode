@@ -30,10 +30,13 @@ const config = {
             presets: [
               ['env', {
                 targets: {
-                  browsers: ['last 2 versions'],
+                  browsers: ['> 5%'],
+                  safari: '10.1',
                   node: 'current',
                 },
                 modules: false,
+                useBuiltIns: true,
+                debug: true,
               }],
             ],
             plugins: [
@@ -48,6 +51,11 @@ const config = {
   },
   plugins: [
     new UglifyJSPlugin({
+      uglifyOptions: {
+        mangle: {
+          safari10: true,
+        },
+      },
       sourceMap: !!devtool,
     }),
     new HtmlWebpackPlugin({template: './src/index.html'}),
