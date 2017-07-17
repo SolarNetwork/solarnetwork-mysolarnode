@@ -1,6 +1,9 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const webpack = require('webpack');
 const path = require('path');
+
+const devtool = 'source-map'; // cheap-module-eval-source-map
 
 const config = {
   entry: './src/index.js',
@@ -9,14 +12,12 @@ const config = {
     filename: 'app.js',
     sourceMapFilename: '[file].map'
   },
-  devtool: 'source-map',//'cheap-module-eval-source-map',
+  devtool: devtool,
   devServer: {
     contentBase: path.join(__dirname, "dist"),
     compress: false,
     port: 9000
   },
-  resolve: { modules: ["node_modules", path.join(__dirname, "node_modules")] },
-  resolveLoader: { modules: ["node_modules", path.join(__dirname, "node_modules")] },
   module: {
     rules: [
       {
@@ -32,19 +33,11 @@ const config = {
                   browsers: ['last 2 versions'],
                   node: 'current',
                 },
+                modules: false,
               }],
             ],
             plugins: [
-              require('babel-plugin-transform-runtime'),
-              [
-                "module-resolver",
-                {
-                  "root": [
-                    "./src"
-                  ],
-                  "cwd": "packagejson"
-                }
-              ],
+//              require('babel-plugin-transform-runtime'),
             ]
           }
         }
@@ -54,14 +47,9 @@ const config = {
     ]
   },
   plugins: [
-    /* uri-js has Windows line endings, causing Uglify to fail :(
-    new webpack.optimize.UglifyJsPlugin({
-      comments: false,
-      compress: {
-        warnings: false
-      },
-      sourceMap: true,
-    }),*/
+    new UglifyJSPlugin({
+      sourceMap: !!devtool,
+    }),
     new HtmlWebpackPlugin({template: './src/index.html'}),
   ]
 };
