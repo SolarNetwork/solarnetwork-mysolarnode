@@ -1,11 +1,21 @@
 'use strict';
 
-import { Configuration,
+import {
+	Configuration,
 	AuthorizationV2Builder,
 	Environment,
 	NodeInstructionUrlHelper,
 	InstructionState,
-	urlQuery } from 'solarnetwork-api-core';
+	urlQuery
+	} from 'solarnetwork-api-core';
+import {
+	AttachSshCommand,
+	SolarSshTerminalWebSocketSubProtocol,
+	SshCloseCodes,
+	SshSession,
+	SshTerminalSettings,
+	SshUrlHelper
+	} from 'solarnetwork-api-ssh';
 import { select, selectAll } from 'd3-selection';
 import { json as jsonRequest } from 'd3-request';
 import dialogPolyfill from 'dialog-polyfill';
@@ -47,21 +57,20 @@ var app;
  * SolarSSH web app, supporting a SSH terminal (via xterm.js) and integration with the HTTP proxy.
  *
  * @class
+ * @param {UrlHelper} nodeUrlHelper the URL helper for accessing SolarNet with
+ * @param {UrlHelper} sshUrlHelper the URL helper with the `SshUrlHelperMixin` for accessing SolarSSH with
  */
-var solarSshApp = function(nodeUrlHelper, options) {
+var solarSshApp = function(nodeUrlHelper, sshUrlHelper, options) {
 	var self = { version : '0.2.0' };
 	var authBuilder = new AuthorizationV2Builder(null, nodeUrlHelper.environment);
 	var config = (options || {});
-	var env = nodeUrlHelper.environment;
+	var env = sshUrlHelper.environment;
 	var sshCredentialsDialog;
 	var terminal;
 
-	var termSettings = {
-		cols: (config.cols || 100),
-		lines: (config.lines || 24),
-	};
+	var termSettings = new SshTerminalSettings(config.cols || 100, config.lines || 24);
 
-	var session;
+	var session; // SshSession
 	var socket;
 	var socketState = 0;
 	var setupGuiWindow;
@@ -70,35 +79,12 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	var dialogCancelled = false;
 
 	/**
-	 * Get/set the terminal column size.
+	 * Get the terminal settings.
 	 *
-	 * Defaults to 100.
-	 *
-	 * @param {Number} [value] if provided, set the column size to this value
-	 * @return if invoked as a getter, the current column size value; otherwise this object
+	 * @return {SshTerminalSettings} the settings
 	 */
-	function cols(value) {
-		if ( !arguments.length ) return termSettings.cols;
-		if ( value > 0 ) {
-			termSettings.cols = value;
-		}
-		return self;
-	}
-
-	/**
-	 * Get/set the terminal lines size.
-	 *
-	 * Defaults to 24.
-	 *
-	 * @param {Number} [value] if provided, set the line size to this value
-	 * @return if invoked as a getter, the current line size value; otherwise this object
-	 */
-	function lines(value) {
-		if ( !arguments.length ) return termSettings.lines;
-		if ( value > 0 ) {
-			termSettings.lines = value;
-		}
-		return self;
+	function terminalSettings() {
+		return termSettings;
 	}
 
 	/**
@@ -122,12 +108,18 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		return self;
 	}
 
+	function saveSessionJson(json) {
+		session = SshSession.fromJsonEncoding(json.data);
+		sshUrlHelper.sshSession = session;
+	}
+	
 	function reset() {
 		if ( setupGuiWindow ) {
 			setupGuiWindow = undefined;
 		}
 		resetWebSocket();
 		session = undefined;
+		sshUrlHelper.session = null;
 		if ( terminal ) {
 			terminal.clear();
 			termWriteGreeting();
@@ -145,24 +137,6 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			socket = undefined;
 		}
 		socketState = 0;
-	}
-
-	function hostUrl() {
-		return ('http' +(env.solarSshTls === true ? 's' : '') +'://' +env.solarSshHost);
-	}
-
-	function baseUrl() {
-		return (hostUrl() +env.solarSshPath +'/api/v1/ssh');
-	}
-
-	function webSocketUrl() {
-		return ('ws' +(env.solarSshTls === true ? 's' : '') +'://'
-			+env.solarSshHost +env.solarSshPath +'/ssh');
-	}
-
-	function setupGuiUrl() {
-		return ('http' +(env.solarSshTls === true ? 's' : '') +'://'
-			+env.solarSshHost +env.solarSshPath +'/nodeproxy/' +session.sessionId +'/');
 	}
 
 	function enableSubmit(value, withoutCascade) {
@@ -242,7 +216,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 	}
 
 	function createSession() {
-		var url = baseUrl() + '/session/new?nodeId=' +nodeUrlHelper.nodeId;
+		var url = sshUrlHelper.createSshSessionUrl();
 		authBuilder.reset().method('GET').url(nodeUrlHelper.viewPendingInstructionsUrl());
 		terminal.write('Requesting new SSH session... ');
 		return executeWithPreSignedAuthorization('GET', url, authBuilder)
@@ -263,12 +237,12 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		}
 		termWriteSuccess();
 		console.log('Created session %s', json.data.sessionId);
-		session = json.data;
+		saveSessionJson(json.data);
 		startSession();
 	}
 
 	function startSession() {
-		var url = baseUrl() + '/session/' +session.sessionId +'/start';
+		var url = sshUrlHelper.startSshSessionUrl();
 		authBuilder.reset().method('POST').contentType('application/x-www-form-urlencoded')
 			.url(nodeUrlHelper.queueInstructionUrl('StartRemoteSsh', [
 				{name: 'host', value: session.host},
@@ -293,7 +267,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		}
 		termWriteSuccess();
 		console.log('Started session %s', json.data.sessionId);
-		session = json.data;
+		saveSessionJson(json.data);
 		enableEnd(true);
 		waitForStartRemoteSsh();
 	}
@@ -303,7 +277,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 			resetWebSocket();
 			terminal.writeln('');
 		}
-		var url = baseUrl() + '/session/' +session.sessionId +'/stop';
+		var url = sshUrlHelper.stopSshSessionUrl();
 		authBuilder.reset().method('POST').contentType('application/x-www-form-urlencoded')
 			.url(nodeUrlHelper.queueInstructionUrl('StopRemoteSsh', [
 				{name: 'host', value: session.host},
@@ -424,8 +398,8 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function connectWebSocket() {
 		terminal.write('Attaching to SSH session... ');
-		var url = webSocketUrl() +'?sessionId=' +session.sessionId;
-		socket = new WebSocket(url, 'solarssh');
+		var url = sshUrlHelper.terminalWebSocketUrl();
+		socket = new WebSocket(url, SolarSshTerminalWebSocketSubProtocol);
 		socket.onopen = webSocketOpen;
 		socket.onmessage = webSocketMessage;
 		socket.onerror = webSocketError;
@@ -434,23 +408,18 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function webSocketOpen(event) {
 		authBuilder.reset().method('GET').url(nodeUrlHelper.viewNodeMetadataUrl());
-		var msg = {
-			cmd: "attach-ssh",
-			data: {
-				'authorization': authBuilder.buildWithSavedKey(),
-				'authorization-date': authorization.requestDate.getTime(),
-				'username': (sshCredentials ? sshCredentials.username : ''),
-				'password' : (sshCredentials ? sshCredentials.password : ''),
-				'term' : 'xterm',
-				'cols' : cols(),
-				'lines' : lines(),
-			}
-		};
+		var msg = new AttachSshCommand(
+			authBuilder.buildWithSavedKey(),
+			authorization.requestDate,
+			(sshCredentials ? sshCredentials.username : ''),
+			(sshCredentials ? sshCredentials.password : ''),
+			termSettings
+		);
 
 		// clear saved credentials
 		sshCredentials = undefined;
 
-		socket.send(JSON.stringify(msg));
+		socket.send(msg.toJsonEncoding());
 	}
 
 	function webSocketClose(event) {
@@ -467,8 +436,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 					+termEscapedText(ansiEscapes.color.bright.yellow, 'Setup')
 					+' button can still be used to view the SolarNode setup GUI.');
 			}
-		} else if ( event.code === 4000 ) {
-			// AUTHENTICATION_FAILURE
+		} else if ( event.code === SshCloseCodes.AUTHENTICATION_FAILURE.value ) {
 			if ( terminal ) {
                 termWriteFailed();
 				if ( event.reason ) {
@@ -504,9 +472,9 @@ var solarSshApp = function(nodeUrlHelper, options) {
 
 	function launchSetupGui() {
 		if ( setupGuiWindow && !setupGuiWindow.closed ) {
-			setupGuiWindow.location = setupGuiUrl();
+			setupGuiWindow.location = sshUrlHelper.httpProxyUrl();
 		} else {
-			setupGuiWindow = window.open(setupGuiUrl());
+			setupGuiWindow = window.open(sshUrlHelper.httpProxyUrl());
 		}
 	}
 
@@ -551,8 +519,7 @@ var solarSshApp = function(nodeUrlHelper, options) {
 		return Object.defineProperties(self, {
 			// property getter/setter functions
 
-			cols: { value: cols },
-			lines: { value: lines },
+			terminalSettings: { value: terminalSettings },
 			sshCredentialsDialog: { value: sshCredentialsDialog },
 
 			// action methods
@@ -569,16 +536,7 @@ function setupUI(env) {
 	selectAll('.node-id').text(env.nodeId);
 }
 
-export default function startApp(env) {
-	if ( !env ) {
-		env = new Environment({
-			tls: true,
-			solarSshHost: 'ssh.solarnetwork.net:8443',
-			solarSshPath: '',
-			solarSshTls: true,
-		});
-	}
-
+export default function startApp() {
 	var config = new Configuration(Object.assign({nodeId:251}, urlQuery.urlQueryParse(window.location.search)));
 
 	setupUI(config);
@@ -586,10 +544,14 @@ export default function startApp(env) {
 	var sshCredDialog = document.getElementById('ssh-credentials-dialog');
 	dialogPolyfill.registerDialog(sshCredDialog);
 
-	var urlHelper = new NodeInstructionUrlHelper(env);
+	var urlHelper = new NodeInstructionUrlHelper();
 	urlHelper.nodeId = config.nodeId;
 
-	app = solarSshApp(urlHelper, config)
+	var sshUrlHelper = new SshUrlHelper();
+	sshUrlHelper.nodeId = config.nodeId;
+	// TODO: support forceEnv settings
+
+	app = solarSshApp(urlHelper, sshUrlHelper, config)
 		.sshCredentialsDialog(sshCredDialog)
 		.start();
 

@@ -27,6 +27,7 @@
     "d3-selection": "^1.1.0",
     "dialog-polyfill": "^0.4.7",
     "solarnetwork-api-core": "SolarNetwork/sn-api-core-js#develop",
+    "solarnetwork-api-ssh": "SolarNetwork/sn-api-ssh-js#develop",
     "xterm": "^2.8.0"
   },
   "devDependencies": {
