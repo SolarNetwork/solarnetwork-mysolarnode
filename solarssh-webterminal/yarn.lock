@@ -727,12 +727,6 @@ babel-plugin-transform-regenerator@^6.22.0:
   dependencies:
     regenerator-transform "0.9.11"
 
-babel-plugin-transform-runtime@^6.23.0:
-  version "6.23.0"
-  resolved "https://registry.yarnpkg.com/babel-plugin-transform-runtime/-/babel-plugin-transform-runtime-6.23.0.tgz#88490d446502ea9b8e7efb0fe09ec4d99479b1ee"
-  dependencies:
-    babel-runtime "^6.22.0"
-
 babel-plugin-transform-strict-mode@^6.24.1:
   version "6.24.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-transform-strict-mode/-/babel-plugin-transform-strict-mode-6.24.1.tgz#d5faf7aa578a65bbe591cf5edae04a0c67020758"
@@ -787,7 +781,7 @@ babel-register@^6.24.1:
     mkdirp "^0.5.1"
     source-map-support "^0.4.2"
 
-babel-runtime@^6.18.0, babel-runtime@^6.22.0, babel-runtime@^6.23.0:
+babel-runtime@^6.18.0, babel-runtime@^6.22.0:
   version "6.23.0"
   resolved "https://registry.yarnpkg.com/babel-runtime/-/babel-runtime-6.23.0.tgz#0a9489f144de70efb3ce4300accdb329e2fc543b"
   dependencies:
@@ -3536,19 +3530,19 @@ sntp@1.x.x:
   dependencies:
     hoek "2.x.x"
 
-solarnetwork-api-core@SolarNetwork/sn-api-core-js#develop:
-  version "0.2.0"
-  resolved "https://codeload.github.com/SolarNetwork/sn-api-core-js/tar.gz/9e323cc78bfa913217706ab9c4b26b38efe85d7f"
+solarnetwork-api-core@0.3:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/solarnetwork-api-core/-/solarnetwork-api-core-0.3.0.tgz#a2c0509ad0dc19a72ce7c597b7a393c81d1f36c4"
   dependencies:
     crypto-js "^3.1.9-1"
     d3-time-format "^2.0.5"
     uri-js "^3.0.2"
 
-solarnetwork-api-ssh@SolarNetwork/sn-api-ssh-js#develop:
-  version "0.1.0"
-  resolved "https://codeload.github.com/SolarNetwork/sn-api-ssh-js/tar.gz/ac35af44472d7a83ff1e71930e6f37fcc9c314c4"
+solarnetwork-api-ssh@0.2:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/solarnetwork-api-ssh/-/solarnetwork-api-ssh-0.2.0.tgz#1673f61c95c26c8bc874c28b9c35678f4675eae3"
   dependencies:
-    solarnetwork-api-core SolarNetwork/sn-api-core-js#develop
+    solarnetwork-api-core "0.3"
 
 sort-keys@^1.1.1, sort-keys@^1.1.2:
   version "1.1.2"
