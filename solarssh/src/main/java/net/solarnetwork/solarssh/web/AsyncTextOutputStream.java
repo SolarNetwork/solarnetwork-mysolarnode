@@ -48,6 +48,8 @@ public class AsyncTextOutputStream extends OutputStream {
    * 
    * @param session
    *        the session to wrap
+   * @throws IOException
+   *         if a communication error occurs
    */
   public AsyncTextOutputStream(Session session) throws IOException {
     super();

@@ -71,6 +71,17 @@ public class SolarSshHttpProxyController {
 
   /**
    * Proxy a HTTP request to the SolarNode associated with a session.
+   * 
+   * @param sessionId
+   *        the {@link SshSession} ID to proxy
+   * @param req
+   *        the request
+   * @param resp
+   *        the response
+   * @throws IOException
+   *         if any communication error occurs
+   * @throws ServletException
+   *         if the {@link SshSessionProxyServlet} cannot be initialized
    */
   @RequestMapping(value = "/nodeproxy/{sessionId}/**", method = { RequestMethod.DELETE,
       RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS, RequestMethod.PATCH,

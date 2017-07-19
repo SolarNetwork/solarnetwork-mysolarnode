@@ -88,6 +88,11 @@ public class SshSessionProxyServlet extends ProxyServlet {
 
   /**
    * Constructor.
+   * 
+   * @param session
+   *        the session to proxy for
+   * @param proxyPath
+   *        the proxy path, to remove from all proxied requests
    */
   public SshSessionProxyServlet(SshSession session, String proxyPath) {
     super();
