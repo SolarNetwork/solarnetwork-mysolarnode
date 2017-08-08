@@ -1467,9 +1467,9 @@ detect-indent@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/detect-indent/-/detect-indent-5.0.0.tgz#3871cc0a6a002e8c3e5b3cf7f336264675f06b9d"
 
-dialog-polyfill@^0.4.7:
-  version "0.4.7"
-  resolved "https://registry.yarnpkg.com/dialog-polyfill/-/dialog-polyfill-0.4.7.tgz#e9995d519f1df349597193198c184ea9402fdbf5"
+dialog-polyfill@^0.4.8:
+  version "0.4.8"
+  resolved "https://registry.yarnpkg.com/dialog-polyfill/-/dialog-polyfill-0.4.8.tgz#0e3d9f15bff165265611baa6084f659cc1535d4e"
 
 diffie-hellman@^5.0.0:
   version "5.0.2"
@@ -3533,6 +3533,14 @@ sntp@1.x.x:
 solarnetwork-api-core@0.3:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/solarnetwork-api-core/-/solarnetwork-api-core-0.3.0.tgz#a2c0509ad0dc19a72ce7c597b7a393c81d1f36c4"
+  dependencies:
+    crypto-js "^3.1.9-1"
+    d3-time-format "^2.0.5"
+    uri-js "^3.0.2"
+
+solarnetwork-api-core@0.6:
+  version "0.6.0"
+  resolved "https://registry.yarnpkg.com/solarnetwork-api-core/-/solarnetwork-api-core-0.6.0.tgz#49a0a65aaf6050785346ed1bb15016aab6c50138"
   dependencies:
     crypto-js "^3.1.9-1"
     d3-time-format "^2.0.5"
