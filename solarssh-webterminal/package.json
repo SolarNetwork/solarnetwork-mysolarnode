@@ -24,8 +24,8 @@
   "dependencies": {
     "d3-request": "^1.0.5",
     "d3-selection": "^1.1.0",
-    "dialog-polyfill": "^0.4.7",
-    "solarnetwork-api-core": "0.3",
+    "dialog-polyfill": "^0.4.8",
+    "solarnetwork-api-core": "0.6",
     "solarnetwork-api-ssh": "0.2",
     "xterm": "^2.8.0"
   },
