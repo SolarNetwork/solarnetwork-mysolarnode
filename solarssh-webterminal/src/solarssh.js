@@ -22,20 +22,23 @@ import Terminal from 'xterm';
 
 Terminal.loadAddon('attach');
 
-const forceEnv = {
-	// uncomment these for production
-	tls: true,
+// for development, can un-comment out the sshEnv and instrEnv objects
+// and configure values for your local dev environment.
 
-	/* comment out these for production
+const sshEnv = null; /*new Environment({
 	debug: true,
-	tls: false,
-	host: 'solarnetworkdev.net:8680'
+	protocol: 'http',
+	host: 'solarnetworkdev.net',
+	port: 8080,
 	nodeId : 167,
-	solarSshHost: 'solarnetworkdev.net:8080',
 	solarSshPath: '/solarssh',
-	solarSshTls: false,
-	*/
-};
+});*/
+
+const instrEnv = null/*new Environment({
+	protocol: 'http',
+	host: 'solarnetworkdev.net',
+	port: 8680,
+});*/
 
 const ansiEscapes = {
 	color: {
@@ -384,6 +387,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	function connectWebSocket() {
 		terminal.write('Attaching to SSH session... ');
 		var url = sshUrlHelper.terminalWebSocketUrl();
+		console.log('Establishing web socket connection to %s using %s protocol', url, SolarSshTerminalWebSocketSubProtocol);
 		socket = new WebSocket(url, SolarSshTerminalWebSocketSubProtocol);
 		socket.onopen = webSocketOpen;
 		socket.onmessage = webSocketMessage;
@@ -400,6 +404,8 @@ var solarSshApp = function(sshUrlHelper, options) {
 			(sshCredentials ? sshCredentials.password : ''),
 			termSettings
 		);
+
+		console.log('Authenticating web socket connection with message %s', msg.toJsonEncoding());
 
 		// clear saved credentials
 		sshCredentials = undefined;
@@ -529,10 +535,12 @@ export default function startApp() {
 	var sshCredDialog = document.getElementById('ssh-credentials-dialog');
 	dialogPolyfill.registerDialog(sshCredDialog);
 
-	var sshUrlHelper = new SshUrlHelper();
+	var sshUrlHelper = new SshUrlHelper(sshEnv);
+	if ( instrEnv ) {
+		sshUrlHelper.nodeUrlHelperEnvironment = instrEnv;
+	}
 	sshUrlHelper.nodeId = config.nodeId;
-	// TODO: support forceEnv settings
-
+	
 	app = solarSshApp(sshUrlHelper, config)
 		.sshCredentialsDialog(sshCredDialog)
 		.start();
