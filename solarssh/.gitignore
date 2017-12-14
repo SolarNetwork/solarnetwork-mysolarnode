@@ -1,9 +1,7 @@
 /.gradle/
 /bin/
 /build/
-/cgy-db*/
 /var/
-/*.properties
 /*.yml
 /*.log
 .DS_Store

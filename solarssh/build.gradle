@@ -66,8 +66,6 @@ configurations.compile {
 	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
 }
 
-version = '0.1'
-
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
