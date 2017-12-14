@@ -209,6 +209,12 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
     ClientSession clientSession = createClient(sess, nodeCredentials, settings, in, out);
     sess.setClientSession(clientSession);
+
+    Map<String, Object> auditProps = sess.auditEventMap("ATTACH-TERM");
+    auditProps.put("date", System.currentTimeMillis());
+    auditProps.put("connectAddress", clientSession.getConnectAddress());
+    SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+
     return sess;
   }
 
@@ -254,6 +260,10 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
           out.close();
         } catch (IOException e) {
           log.debug("Error closing SSH output stream: {}", e.getMessage());
+        } finally {
+          Map<String, Object> auditProps = sess.auditEventMap("DETACH-TERM");
+          auditProps.put("date", System.currentTimeMillis());
+          SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
         }
       }
     });

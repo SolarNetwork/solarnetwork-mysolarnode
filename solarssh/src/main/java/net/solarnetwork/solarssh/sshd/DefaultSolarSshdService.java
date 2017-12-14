@@ -26,9 +26,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyPair;
 import java.util.Collections;
+import java.util.Map;
 
 import org.apache.sshd.common.channel.Channel;
 import org.apache.sshd.common.channel.ChannelListener;
+import org.apache.sshd.common.io.IoSession;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
@@ -41,7 +43,9 @@ import org.springframework.core.io.Resource;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.solarssh.service.SolarSshdService;
+import net.solarnetwork.util.JsonUtils;
 
 /**
  * Service to manage the SSH server.
@@ -143,6 +147,14 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         sess.setEstablished(true);
+
+        Map<String, Object> auditProps = sess.auditEventMap("NODE-CONNECT");
+        auditProps.put("date", System.currentTimeMillis());
+        IoSession ioSession = session.getIoSession();
+        if (ioSession != null) {
+          auditProps.put("remoteAddress", ioSession.getRemoteAddress());
+        }
+        SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
       }
     }
   }
@@ -156,7 +168,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   public void sessionClosed(Session session) {
     String sessionId = session.getUsername();
     if (sessionId != null) {
-      LOG.info("Session {} closed", session.getUsername());
+      LOG.info("Session {} closed", sessionId);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         sessionDao.delete(sess);
