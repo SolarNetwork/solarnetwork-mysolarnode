@@ -1,10 +1,8 @@
+/* eslint-env es6, browser, commonjs */
 'use strict';
 
 import {
 	Configuration,
-	AuthorizationV2Builder,
-	Environment,
-	InstructionState,
 	urlQuery
 	} from 'solarnetwork-api-core';
 import {
@@ -22,20 +20,23 @@ import Terminal from 'xterm';
 
 Terminal.loadAddon('attach');
 
-const forceEnv = {
-	// uncomment these for production
-	tls: true,
+// for development, can un-comment out the sshEnv and instrEnv objects
+// and configure values for your local dev environment.
 
-	/* comment out these for production
+const sshEnv = null; /*new Environment({
 	debug: true,
-	tls: false,
-	host: 'solarnetworkdev.net:8680'
+	protocol: 'http',
+	host: 'solarnetworkdev.net',
+	port: 8080,
 	nodeId : 167,
-	solarSshHost: 'solarnetworkdev.net:8080',
 	solarSshPath: '/solarssh',
-	solarSshTls: false,
-	*/
-};
+});*/
+
+const instrEnv = null/*new Environment({
+	protocol: 'http',
+	host: 'solarnetworkdev.net',
+	port: 8680,
+});*/
 
 const ansiEscapes = {
 	color: {
@@ -57,11 +58,11 @@ var app;
  *
  * @class
  * @param {UrlHelper} sshUrlHelper the URL helper with the `SshUrlHelperMixin` for accessing SolarSSH with
+ * @param {Object} [options] optional configuration options
  */
 var solarSshApp = function(sshUrlHelper, options) {
-	var self = { version : '0.2.0' };
+	var self = { version : '0.3.0' };
 	var config = (options || {});
-	var env = sshUrlHelper.environment;
 	var sshCredentialsDialog;
 	var terminal;
 
@@ -93,7 +94,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 * opened (but the HTTP proxy functionality may still be used).
 	 *
 	 * @param {Element} [value] if provided, set the SSH credential dialog element to this value
-	 * @return if invoked as a getter, the current SSH credential dialog element value; otherwise this object
+	 * @return {Element|this} if invoked as a getter, the current SSH credential dialog element value; otherwise this object
 	 */
 	function sshCredentialsDialog(value) {
 		if ( !arguments.length ) return sshCredentialsDialog;
@@ -353,11 +354,11 @@ var solarSshApp = function(sshUrlHelper, options) {
 		sshCredentialsDialog.showModal();
 	}
 
-	function handleSshCredentialsCancel(event) {
+	function handleSshCredentialsCancel() {
 		dialogCancelled = true;
 	}
 
-	function handleSshCredentials(event) {
+	function handleSshCredentials() {
 		var dialog = select(sshCredentialsDialog);
 		var usernameInput = dialog.select('input[type=text]')
 		if ( sshCredentialsDialog.returnValue === 'login' && !dialogCancelled ) {
@@ -384,6 +385,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	function connectWebSocket() {
 		terminal.write('Attaching to SSH session... ');
 		var url = sshUrlHelper.terminalWebSocketUrl();
+		console.log('Establishing web socket connection to %s using %s protocol', url, SolarSshTerminalWebSocketSubProtocol);
 		socket = new WebSocket(url, SolarSshTerminalWebSocketSubProtocol);
 		socket.onopen = webSocketOpen;
 		socket.onmessage = webSocketMessage;
@@ -391,7 +393,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 		socket.onclose = webSocketClose;
 	}
 
-	function webSocketOpen(event) {
+	function webSocketOpen() {
 		var auth = sshUrlHelper.connectTerminalWebSocketAuthBuilder();
 		var msg = new AttachSshCommand(
 			auth.buildWithSavedKey(),
@@ -400,6 +402,8 @@ var solarSshApp = function(sshUrlHelper, options) {
 			(sshCredentials ? sshCredentials.password : ''),
 			termSettings
 		);
+
+		console.log('Authenticating web socket connection with message %s', msg.toJsonEncoding());
 
 		// clear saved credentials
 		sshCredentials = undefined;
@@ -468,7 +472,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 *
 	 * This will initialize the terminal and prepare the app for use.
 	 *
-	 * @return this object
+	 * @return {this} this object
 	 */
 	function start() {
 		terminal = new Terminal({
@@ -486,13 +490,36 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 *
 	 * This will stop any active session and reset the app for re-use.
 	 *
-	 * @return this object
+	 * @return {this} this object
 	 */
 	function stop() {
 		if ( session ) {
 			stopSession();
 		} else {
 			reset();
+		}
+		return self;
+	}
+
+	/**
+	 * Change the node ID.
+	 * 
+	 * This will stop any currently active session.
+	 * 
+	 * @param {number} newNodeId the new node ID to change to
+	 * @returns {this} this object
+	 */
+	function changeNodeId(newNodeId) {
+		function doChangeNode() {
+			var nodeId = Number(newNodeId);
+			if ( nodeId ) {
+				sshUrlHelper.nodeId = nodeId;
+			}
+		}
+		if ( session ) {
+			stopSession().on('load.changeNodeId', doChangeNode);
+		} else {
+			doChangeNode();
 		}
 		return self;
 	}
@@ -509,6 +536,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 
 			// action methods
 
+			changeNodeId: { value: changeNodeId },
 			start: { value: start },
 			stop: { value: stop },
 		});
@@ -521,6 +549,20 @@ function setupUI(env) {
 	selectAll('.node-id').text(env.nodeId);
 }
 
+function setupNodeIdChange(app) {
+	// allow the node ID to be edited, JS-8
+	select('#node-id').on('focus', function() {
+		this.dataset.oldNodeId = this.textContent;
+	}).on('blur', function() {
+		var currValue = Number(this.textContent),
+			oldNodeId = Number(this.dataset.oldNodeId);
+		if ( currValue && currValue !== oldNodeId ) {
+			app.changeNodeId(currValue);
+		}
+		delete this.dataset.oldNodeId;
+	});
+}
+
 export default function startApp() {
 	var config = new Configuration(Object.assign({nodeId:251}, urlQuery.urlQueryParse(window.location.search)));
 
@@ -529,13 +571,17 @@ export default function startApp() {
 	var sshCredDialog = document.getElementById('ssh-credentials-dialog');
 	dialogPolyfill.registerDialog(sshCredDialog);
 
-	var sshUrlHelper = new SshUrlHelper();
+	var sshUrlHelper = new SshUrlHelper(sshEnv);
+	if ( instrEnv ) {
+		sshUrlHelper.nodeUrlHelperEnvironment = instrEnv;
+	}
 	sshUrlHelper.nodeId = config.nodeId;
-	// TODO: support forceEnv settings
-
+	
 	app = solarSshApp(sshUrlHelper, config)
 		.sshCredentialsDialog(sshCredDialog)
 		.start();
+
+	setupNodeIdChange(app);
 
 	window.onbeforeunload = function() {
 		app.stop();

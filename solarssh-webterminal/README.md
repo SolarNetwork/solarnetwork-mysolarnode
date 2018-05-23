@@ -16,10 +16,24 @@ This webapp can be loaded from anywhere, even from your local computer if you do
 source. It uses the [SolarSSH][solarssh-api] and [SolarNet][solarnet-api] APIs to
 accomplish everything.
 
-# Building
 
-NPM is used to build the app. Run `npm run build` to build (or `yarn run build`), then the
-`dist/index.html` file can be opened in your browser.
+# Use
+
+You can choose the node ID to connect to either by adding a `nodeId=X` URL query parameter
+or simply click on the node ID in the page header to edit that to any value. Be aware that
+changing the node ID requires closing any open session. You must finish editing the node 
+ID before it will take effect. Just press <kbd>Tab</kbd> or click on something else.
+
+![demo](docs/solarssh-demo-change-node-id.gif)
+
+Once you've configured the node ID to connect to, fill in the SolarNetwork **user token**
+credentials that have access to that node and click the **Connect** button. SolarSSH will
+immediately prompt you for the node OS SSH credentials to use. You can fill those in now,
+or press the **Skip** button if you only want to use the HTTP proxy feature.
+
+It can take a few minutes for the connection to be established, depending on how the node
+has been configured.
+
 
 # URL parameters
 
@@ -44,6 +58,43 @@ For example, to control node ID 123 using a 80x48 terminal, you'd use a URL like
 
 	index.html?nodeId=123&cols=80&lines=48
 
+
+# Building
+
+The build uses [NPM][npm] or [Yarn][yarn]. First, initialize the dependencies:
+
+```shell
+# NPM
+npm install
+
+# or, Yarn
+yarn install
+```
+
+Then, the development web server can be started via
+
+```shell
+# NPM
+npm run start
+
+# or, Yarn
+yarn run start
+```
+
+and then the app can be reached at [localhost:9000](http://localhost:9000). For a
+produciton build, use
+
+```shell
+# NPM
+npm run build -- --config webpack.prod.js
+
+# or, Yarn
+yarn run build --config webpack.prod.js
+```
+
+and the app will be built in the `dist` directory.
+
+
 # Development
 
 This app uses the [SolarNetwork Core library][sn-api-core] for [working with the SolarNet
@@ -55,6 +106,8 @@ making [heavy use][SshUrlHelper-use] of the [SshUrlHelper][SshUrlHelper] and
 [with][sess-json] the SolarSSH API.
 
 
+  [npm]: https://www.npmjs.com/
+  [yarn]: https://yarnpkg.com/
   [solarssh]: https://github.com/SolarNetwork/solarnetwork-mysolarnode/tree/develop/solarssh
   [solarssh-api]: https://github.com/SolarNetwork/solarnetwork/wiki/SolarSSH-API
   [solarnet-api]: https://github.com/SolarNetwork/solarnetwork/wiki/API-Developer-Guide
