@@ -16,6 +16,49 @@ This webapp can be loaded from anywhere, even from your local computer if you do
 source. It uses the [SolarSSH][solarssh-api] and [SolarNet][solarnet-api] APIs to
 accomplish everything.
 
+
+# Use
+
+You can choose the node ID to connect to either by adding a `nodeId=X` URL query parameter
+or simply click on the node ID in the page header to edit that to any value. Be aware that
+changing the node ID requires closing any open session. You must finish editing the node 
+ID before it will take effect. Just press <kbd>Tab</kbd> or click on something else.
+
+![demo](docs/solarssh-demo-change-node-id.gif)
+
+Once you've configured the node ID to connect to, fill in the SolarNetwork **user token**
+credentials that have access to that node and click the **Connect** button. SolarSSH will
+immediately prompt you for the node OS SSH credentials to use. You can fill those in now,
+or press the **Skip** button if you only want to use the HTTP proxy feature.
+
+It can take a few minutes for the connection to be established, depending on how the node
+has been configured.
+
+
+# URL parameters
+
+You can pass some URL parameters to the webapp to modify a few things:
+
+<table>
+	<tr>
+		<th><code>nodeId</code></th>
+		<td>This one is pretty much necessary. Sets the ID of the node you want to control.</td>
+	</tr>
+	<tr>
+		<th><code>cols</code></th>
+		<td>The number of columns to use in the terminal. Defaults to <code>100</code>.</td>
+	</tr>
+	<tr>
+		<th><code>lines</code></th>
+		<td>The number of lines (rows) to use in the terminal. Defaults to <code>24</code>. Classic!</td>
+	</tr>
+</table>
+
+For example, to control node ID 123 using a 80x48 terminal, you'd use a URL like
+
+	index.html?nodeId=123&cols=80&lines=48
+
+
 # Building
 
 The build uses [NPM][npm] or [Yarn][yarn]. First, initialize the dependencies:
@@ -51,29 +94,6 @@ yarn run build --config webpack.prod.js
 
 and the app will be built in the `dist` directory.
 
-
-# URL parameters
-
-You can pass some URL parameters to the webapp to modify a few things:
-
-<table>
-	<tr>
-		<th><code>nodeId</code></th>
-		<td>This one is pretty much necessary. Sets the ID of the node you want to control.</td>
-	</tr>
-	<tr>
-		<th><code>cols</code></th>
-		<td>The number of columns to use in the terminal. Defaults to <code>100</code>.</td>
-	</tr>
-	<tr>
-		<th><code>lines</code></th>
-		<td>The number of lines (rows) to use in the terminal. Defaults to <code>24</code>. Classic!</td>
-	</tr>
-</table>
-
-For example, to control node ID 123 using a 80x48 terminal, you'd use a URL like
-
-	index.html?nodeId=123&cols=80&lines=48
 
 # Development
 
