@@ -1,5 +1,4 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 const webpack = require('webpack');
 const path = require('path');
 
@@ -50,14 +49,6 @@ const config = {
     ]
   },
   plugins: [
-    new UglifyJSPlugin({
-      uglifyOptions: {
-        mangle: {
-          safari10: true,
-        },
-      },
-      sourceMap: !!devtool,
-    }),
     new HtmlWebpackPlugin({template: './src/index.html'}),
   ]
 };
