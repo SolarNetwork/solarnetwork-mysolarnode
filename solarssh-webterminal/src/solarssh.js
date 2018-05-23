@@ -1,10 +1,8 @@
+/* eslint-env es6, browser, commonjs */
 'use strict';
 
 import {
 	Configuration,
-	AuthorizationV2Builder,
-	Environment,
-	InstructionState,
 	urlQuery
 	} from 'solarnetwork-api-core';
 import {
@@ -60,11 +58,11 @@ var app;
  *
  * @class
  * @param {UrlHelper} sshUrlHelper the URL helper with the `SshUrlHelperMixin` for accessing SolarSSH with
+ * @param {Object} [options] optional configuration options
  */
 var solarSshApp = function(sshUrlHelper, options) {
-	var self = { version : '0.2.0' };
+	var self = { version : '0.3.0' };
 	var config = (options || {});
-	var env = sshUrlHelper.environment;
 	var sshCredentialsDialog;
 	var terminal;
 
@@ -96,7 +94,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 * opened (but the HTTP proxy functionality may still be used).
 	 *
 	 * @param {Element} [value] if provided, set the SSH credential dialog element to this value
-	 * @return if invoked as a getter, the current SSH credential dialog element value; otherwise this object
+	 * @return {Element|this} if invoked as a getter, the current SSH credential dialog element value; otherwise this object
 	 */
 	function sshCredentialsDialog(value) {
 		if ( !arguments.length ) return sshCredentialsDialog;
@@ -356,11 +354,11 @@ var solarSshApp = function(sshUrlHelper, options) {
 		sshCredentialsDialog.showModal();
 	}
 
-	function handleSshCredentialsCancel(event) {
+	function handleSshCredentialsCancel() {
 		dialogCancelled = true;
 	}
 
-	function handleSshCredentials(event) {
+	function handleSshCredentials() {
 		var dialog = select(sshCredentialsDialog);
 		var usernameInput = dialog.select('input[type=text]')
 		if ( sshCredentialsDialog.returnValue === 'login' && !dialogCancelled ) {
@@ -395,7 +393,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 		socket.onclose = webSocketClose;
 	}
 
-	function webSocketOpen(event) {
+	function webSocketOpen() {
 		var auth = sshUrlHelper.connectTerminalWebSocketAuthBuilder();
 		var msg = new AttachSshCommand(
 			auth.buildWithSavedKey(),
@@ -474,7 +472,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 *
 	 * This will initialize the terminal and prepare the app for use.
 	 *
-	 * @return this object
+	 * @return {this} this object
 	 */
 	function start() {
 		terminal = new Terminal({
@@ -492,13 +490,36 @@ var solarSshApp = function(sshUrlHelper, options) {
 	 *
 	 * This will stop any active session and reset the app for re-use.
 	 *
-	 * @return this object
+	 * @return {this} this object
 	 */
 	function stop() {
 		if ( session ) {
 			stopSession();
 		} else {
 			reset();
+		}
+		return self;
+	}
+
+	/**
+	 * Change the node ID.
+	 * 
+	 * This will stop any currently active session.
+	 * 
+	 * @param {number} newNodeId the new node ID to change to
+	 * @returns {this} this object
+	 */
+	function changeNodeId(newNodeId) {
+		function doChangeNode() {
+			var nodeId = Number(newNodeId);
+			if ( nodeId ) {
+				sshUrlHelper.nodeId = nodeId;
+			}
+		}
+		if ( session ) {
+			stopSession().on('load.changeNodeId', doChangeNode);
+		} else {
+			doChangeNode();
 		}
 		return self;
 	}
@@ -515,6 +536,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 
 			// action methods
 
+			changeNodeId: { value: changeNodeId },
 			start: { value: start },
 			stop: { value: stop },
 		});
@@ -525,6 +547,20 @@ var solarSshApp = function(sshUrlHelper, options) {
 
 function setupUI(env) {
 	selectAll('.node-id').text(env.nodeId);
+}
+
+function setupNodeIdChange(app) {
+	// allow the node ID to be edited, JS-8
+	select('#node-id').on('focus', function() {
+		this.dataset.oldNodeId = this.textContent;
+	}).on('blur', function() {
+		var currValue = Number(this.textContent),
+			oldNodeId = Number(this.dataset.oldNodeId);
+		if ( currValue && currValue !== oldNodeId ) {
+			app.changeNodeId(currValue);
+		}
+		delete this.dataset.oldNodeId;
+	});
 }
 
 export default function startApp() {
@@ -544,6 +580,8 @@ export default function startApp() {
 	app = solarSshApp(sshUrlHelper, config)
 		.sshCredentialsDialog(sshCredDialog)
 		.start();
+
+	setupNodeIdChange(app);
 
 	window.onbeforeunload = function() {
 		app.stop();
