@@ -70,7 +70,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 checkstyle {
-   toolVersion ="7.6.1" 
+   toolVersion ="8.11" 
 }
 
 eclipse {
