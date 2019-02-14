@@ -22,6 +22,8 @@
 
 package net.solarnetwork.solarssh.service;
 
+import org.apache.sshd.server.session.ServerSession;
+
 /**
  * API for the SolarSSHD service.
  * 
@@ -29,5 +31,14 @@ package net.solarnetwork.solarssh.service;
  * @version 1.0
  */
 public interface SolarSshdService {
+
+  /**
+   * Find a server session for a given SolarSSH session ID.
+   * 
+   * @param sessionId
+   *        the session ID
+   * @return the server session, or {@literal null} if none found
+   */
+  ServerSession serverSessionForSessionId(String sessionId);
 
 }

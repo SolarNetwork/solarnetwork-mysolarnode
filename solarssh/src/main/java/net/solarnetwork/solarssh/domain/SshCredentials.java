@@ -25,11 +25,7 @@ package net.solarnetwork.solarssh.domain;
 import java.security.KeyPair;
 
 /**
- * FIXME
- * 
- * <p>
- * TODO
- * </p>
+ * Credentials.
  * 
  * @author matt
  * @version 1.0

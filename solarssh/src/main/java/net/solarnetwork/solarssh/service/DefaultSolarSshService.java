@@ -44,6 +44,7 @@ import org.apache.sshd.common.future.CloseFuture;
 import org.apache.sshd.common.future.SshFutureListener;
 import org.apache.sshd.common.keyprovider.KeyPairProvider;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
+import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.util.io.NoCloseInputStream;
 import org.apache.sshd.common.util.io.NoCloseOutputStream;
 import org.slf4j.Logger;
@@ -157,6 +158,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
             log.info("SshSession {} created: node {}, rport {}", sessionId, nodeId, rport);
             Map<String, Object> auditProps = sess.auditEventMap("NEW");
             auditProps.put("date", sess.getCreated());
+            auditProps.put(REVERSE_PORT_PARAM, rport);
             SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
             return sess;
           }
@@ -309,14 +311,21 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       clientSession.close(false);
       sess.setClientSession(null);
     }
-    log.debug("Ended session {}", sess.getId());
-    long now = System.currentTimeMillis();
-    long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
-    Map<String, Object> auditProps = sess.auditEventMap("END");
-    auditProps.put("date", now);
-    auditProps.put("duration", secs);
-    SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
-    sess.setEstablished(false);
+    Session serverSession = sess.getServerSession();
+    if (serverSession != null) {
+      serverSession.close(false);
+      sess.setServerSession(null);
+    }
+    if (sess.isEstablished()) {
+      log.debug("Ended session {}", sess.getId());
+      long now = System.currentTimeMillis();
+      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
+      Map<String, Object> auditProps = sess.auditEventMap("END");
+      auditProps.put("date", now);
+      auditProps.put("duration", secs);
+      SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+      sess.setEstablished(false);
+    }
   }
 
   private Map<String, Object> createRemoteSshInstructionParams(SshSession sess) {
