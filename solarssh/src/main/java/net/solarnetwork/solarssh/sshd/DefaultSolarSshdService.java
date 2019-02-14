@@ -22,10 +22,14 @@
 
 package net.solarnetwork.solarssh.sshd;
 
+import static net.solarnetwork.util.JsonUtils.getJSONString;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.KeyPair;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.sshd.common.channel.Channel;
@@ -34,9 +38,11 @@ import org.apache.sshd.common.io.IoSession;
 import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
+import org.apache.sshd.common.session.helpers.AbstractSession;
 import org.apache.sshd.common.util.security.SecurityUtils;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.pubkey.CachingPublicKeyAuthenticator;
+import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
@@ -45,7 +51,6 @@ import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.solarssh.service.SolarSshdService;
-import net.solarnetwork.util.JsonUtils;
 
 /**
  * Service to manage the SSH server.
@@ -141,12 +146,25 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   }
 
   @Override
+  public synchronized ServerSession serverSessionForSessionId(String sessionId) {
+    if (server == null || !server.isOpen()) {
+      return null;
+    }
+    List<AbstractSession> sessions = server.getActiveSessions();
+    LOG.debug("{} active sessions: {}", sessions != null ? sessions.size() : 0, sessions);
+    AbstractSession session = sessions.stream().filter(s -> sessionId.equals(s.getUsername()))
+        .findFirst().orElse(null);
+    return (ServerSession) session;
+  }
+
+  @Override
   public void sessionEvent(Session session, Event event) {
     if (event == SessionListener.Event.Authenticated) {
       String sessionId = session.getUsername();
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         sess.setEstablished(true);
+        sess.setServerSession(session);
 
         Map<String, Object> auditProps = sess.auditEventMap("NODE-CONNECT");
         auditProps.put("date", System.currentTimeMillis());
@@ -154,7 +172,8 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         if (ioSession != null) {
           auditProps.put("remoteAddress", ioSession.getRemoteAddress());
         }
-        SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+        auditProps.put("rport", sess.getReverseSshPort());
+        SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
       }
     }
   }
@@ -162,18 +181,50 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   @Override
   public void sessionException(Session session, Throwable t) {
     LOG.warn("Session {} exception", session.getUsername(), t);
+    logSessionClosed(session, t);
   }
 
   @Override
   public void sessionClosed(Session session) {
     String sessionId = session.getUsername();
     if (sessionId != null) {
-      LOG.info("Session {} closed", sessionId);
+      logSessionClosed(session, null);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         sessionDao.delete(sess);
       }
     }
+  }
+
+  private Map<String, Object> auditEventMap(Session session, String eventName) {
+    String sessionId = session.getUsername();
+    SshSession sess = sessionDao.findOne(sessionId);
+    Map<String, Object> map;
+    if (sess != null) {
+      map = sess.auditEventMap(eventName);
+    } else {
+      map = new LinkedHashMap<>(8);
+      map.put("sessionId", sessionId);
+      map.put("event", eventName);
+    }
+    long now = System.currentTimeMillis();
+    map.put("date", now);
+    if (sess != null) {
+      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
+      map.put("duration", secs);
+    }
+    return map;
+
+  }
+
+  private void logSessionClosed(Session session, Throwable t) {
+    String sessionId = session.getUsername();
+    LOG.info("Session {} closed", sessionId);
+    Map<String, Object> auditProps = auditEventMap(session, "NODE-DISCONNECT");
+    if (t != null) {
+      auditProps.put("error", t.toString());
+    }
+    SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
   }
 
   @Override

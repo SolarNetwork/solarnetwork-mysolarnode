@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.sshd.client.session.ClientSession;
+import org.apache.sshd.common.session.Session;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -53,6 +54,7 @@ public class SshSession {
   private Long startInstructionId;
   private Long stopInstructionId;
   private ClientSession clientSession;
+  private Session serverSession;
 
   /**
    * Constructor.
@@ -155,6 +157,16 @@ public class SshSession {
   @JsonIgnore
   public void setClientSession(ClientSession clientSession) {
     this.clientSession = clientSession;
+  }
+
+  @JsonIgnore
+  public Session getServerSession() {
+    return serverSession;
+  }
+
+  @JsonIgnore
+  public void setServerSession(Session serverSession) {
+    this.serverSession = serverSession;
   }
 
   /**
