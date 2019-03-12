@@ -334,7 +334,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 				} else {
 					// still waiting... try again in a little bit
 					terminal.write('.');
-					setTimeout(executeQuery, 15000);
+					setTimeout(executeQuery, 10000);
 				}
 			})
 			.on('error', function(xhr) {
@@ -346,7 +346,9 @@ var solarSshApp = function(sshUrlHelper, options) {
 			})
 			.send('GET');
 		}
-		executeQuery();
+
+		// add an initial delay of a small amount, to give MQTT based connections time to establish themselves
+		setTimeout(executeQuery, 4000);
 	}
 
 	function requestSshCredentials() {
