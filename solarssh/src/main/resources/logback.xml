@@ -29,7 +29,7 @@
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
     <file>logs/solarssh.log</file>
     <append>true</append>
-    <immediateFlush>false</immediateFlush>
+    <immediateFlush>true</immediateFlush>
 
     <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
       <fileNamePattern>logs/solarssh.%i.log.zip</fileNamePattern>
