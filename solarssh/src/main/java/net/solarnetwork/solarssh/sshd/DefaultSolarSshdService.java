@@ -26,6 +26,7 @@ import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.SocketAddress;
 import java.security.KeyPair;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -191,7 +192,24 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
       logSessionClosed(session, null);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
-        sessionDao.delete(sess);
+        // check if matching remote address
+        SocketAddress closedSessionRemoteAddress = null;
+        SocketAddress daoSessionRemoteAddress = null;
+        IoSession ioSession = session.getIoSession();
+        if (ioSession != null) {
+          closedSessionRemoteAddress = ioSession.getRemoteAddress();
+        }
+        Session daoServerSession = sess.getServerSession();
+        if (daoServerSession != null) {
+          IoSession daoIoSession = daoServerSession.getIoSession();
+          if (daoIoSession != null) {
+            daoSessionRemoteAddress = daoIoSession.getRemoteAddress();
+          }
+        }
+        if (closedSessionRemoteAddress == null || daoSessionRemoteAddress == null
+            || closedSessionRemoteAddress.equals(daoSessionRemoteAddress)) {
+          sessionDao.delete(sess);
+        }
       }
     }
   }
@@ -221,6 +239,10 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     String sessionId = session.getUsername();
     LOG.info("Session {} closed", sessionId);
     Map<String, Object> auditProps = auditEventMap(session, "NODE-DISCONNECT");
+    IoSession ioSession = session.getIoSession();
+    if (ioSession != null) {
+      auditProps.put("remoteAddress", ioSession.getRemoteAddress());
+    }
     if (t != null) {
       auditProps.put("error", t.toString());
     }
