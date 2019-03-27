@@ -43,7 +43,7 @@ dependencies {
 	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
 	
 	// SSH
-    compile 'org.apache.sshd:sshd-core:1.7.0'
+    compile 'org.apache.sshd:sshd-core:2.2.0'
     compile "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
     compile 'net.i2p.crypto:eddsa:0.3.0'
