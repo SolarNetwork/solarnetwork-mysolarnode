@@ -13,7 +13,7 @@ repositories {
 }
 
 ext {
-	bouncyCastleVersion = '1.56'
+	bouncyCastleVersion = '1.57'
 	jacksonVersion = '2.8.7'
 	springVersion = '4.3.9.RELEASE'
 	slf4jVersion = '1.7.25'
@@ -43,10 +43,10 @@ dependencies {
 	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
 	
 	// SSH
-    compile 'org.apache.sshd:sshd-core:1.4.0'
+    compile 'org.apache.sshd:sshd-core:2.2.0'
     compile "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
     compile "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
-    compile 'net.i2p.crypto:eddsa:0.1.0'
+    compile 'net.i2p.crypto:eddsa:0.3.0'
     
     // HTTP
     compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'

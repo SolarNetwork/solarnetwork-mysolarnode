@@ -42,8 +42,6 @@ import org.apache.sshd.client.channel.ChannelShell;
 import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.future.CloseFuture;
 import org.apache.sshd.common.future.SshFutureListener;
-import org.apache.sshd.common.keyprovider.KeyPairProvider;
-import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.util.io.NoCloseInputStream;
 import org.apache.sshd.common.util.io.NoCloseOutputStream;
@@ -223,12 +221,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   private ClientSession createClient(SshSession sess, SshCredentials credentials,
       SshTerminalSettings settings, InputStream in, OutputStream out) throws IOException {
     SshClient client = SshClient.setUpDefaultClient();
-
-    if (credentials.getKeyPair() != null) {
-      client.setKeyPairProvider(new MappedKeyPairProvider(credentials.getKeyPair()));
-    } else {
-      client.setKeyPairProvider(KeyPairProvider.EMPTY_KEYPAIR_PROVIDER);
-    }
     client.start();
 
     ClientSession session = client
