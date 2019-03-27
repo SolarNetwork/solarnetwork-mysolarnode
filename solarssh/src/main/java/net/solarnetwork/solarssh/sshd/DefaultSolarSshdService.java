@@ -116,7 +116,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     s.setPublickeyAuthenticator(
         new CachingPublicKeyAuthenticator(new SolarSshPublicKeyAuthenticator(sessionDao)));
 
-    s.setTcpipForwardingFilter(new SshSessionForwardFilter(sessionDao));
+    s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
 
     s.addSessionListener(this);
     s.addChannelListener(this);
