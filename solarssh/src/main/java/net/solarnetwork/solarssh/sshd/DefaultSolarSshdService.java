@@ -25,21 +25,19 @@ package net.solarnetwork.solarssh.sshd;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.security.KeyPair;
-import java.util.Collections;
+import java.net.SocketAddress;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.sshd.common.channel.Channel;
 import org.apache.sshd.common.channel.ChannelListener;
+import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.io.IoSession;
-import org.apache.sshd.common.keyprovider.MappedKeyPairProvider;
+import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.common.session.helpers.AbstractSession;
-import org.apache.sshd.common.util.security.SecurityUtils;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.pubkey.CachingPublicKeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
@@ -95,27 +93,22 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     s = SshServer.setUpDefaultServer();
     s.setPort(port);
 
-    KeyPair kp;
-    try (InputStream inputStream = serverKeyResource.getInputStream()) {
-      kp = SecurityUtils.loadKeyPairIdentity(serverKeyResource.getFilename(), inputStream,
-          k -> serverKeyPassword);
-    } catch (Exception e) {
-      LOG.error("Failed to load server host key resource {}: {}", serverKeyResource,
-          e.getMessage());
-      if (e instanceof RuntimeException) {
-        throw (RuntimeException) e;
-      }
+    try {
+      FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
+          serverKeyResource.getFile().toPath());
+      keyPairProvider.setPasswordFinder(FilePasswordProvider.of(serverKeyPassword));
+      s.setKeyPairProvider(keyPairProvider);
+      LOG.info("Using SSH server key from {}", serverKeyResource);
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
-
-    LOG.info("Loaded SSH server key from {}", serverKeyResource);
-    s.setKeyPairProvider(new MappedKeyPairProvider(Collections.singletonList(kp)));
+    //s.setKeyPairProvider(new MappedKeyPairProvider(Collections.singletonList(kp)));
 
     // TODO: verify if CachingPublicKeyAuthenticator is appropriate
     s.setPublickeyAuthenticator(
         new CachingPublicKeyAuthenticator(new SolarSshPublicKeyAuthenticator(sessionDao)));
 
-    s.setTcpipForwardingFilter(new SshSessionForwardFilter(sessionDao));
+    s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
 
     s.addSessionListener(this);
     s.addChannelListener(this);
@@ -191,7 +184,24 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
       logSessionClosed(session, null);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
-        sessionDao.delete(sess);
+        // check if matching remote address
+        SocketAddress closedSessionRemoteAddress = null;
+        SocketAddress daoSessionRemoteAddress = null;
+        IoSession ioSession = session.getIoSession();
+        if (ioSession != null) {
+          closedSessionRemoteAddress = ioSession.getRemoteAddress();
+        }
+        Session daoServerSession = sess.getServerSession();
+        if (daoServerSession != null) {
+          IoSession daoIoSession = daoServerSession.getIoSession();
+          if (daoIoSession != null) {
+            daoSessionRemoteAddress = daoIoSession.getRemoteAddress();
+          }
+        }
+        if (closedSessionRemoteAddress == null || daoSessionRemoteAddress == null
+            || closedSessionRemoteAddress.equals(daoSessionRemoteAddress)) {
+          sessionDao.delete(sess);
+        }
       }
     }
   }
@@ -221,6 +231,10 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     String sessionId = session.getUsername();
     LOG.info("Session {} closed", sessionId);
     Map<String, Object> auditProps = auditEventMap(session, "NODE-DISCONNECT");
+    IoSession ioSession = session.getIoSession();
+    if (ioSession != null) {
+      auditProps.put("remoteAddress", ioSession.getRemoteAddress());
+    }
     if (t != null) {
       auditProps.put("error", t.toString());
     }
