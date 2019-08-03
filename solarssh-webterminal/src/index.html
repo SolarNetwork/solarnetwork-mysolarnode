@@ -1,41 +1,69 @@
 <!DOCTYPE html>
 <html class="standalone">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=570">
-	<meta name="apple-mobile-web-app-capable" content="yes">
-	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<title>SolarSSH Terminal</title>
-	<link type="text/css" rel="stylesheet" href="css/dialog-polyfill.css">
-	<link type="text/css" rel="stylesheet" href="css/xterm.css">
-	<link type="text/css" rel="stylesheet" href="css/solarssh.css">
-</head>
-<body>
-	<header class="hboxrow">
-		<h1>SolarNode <span id="node-id" class="node-id" contenteditable="true"></span> SSH</h1>
-		<input type="text" name="token" placeholder="Token" value=""
-			autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-		<input type="password" name="secret" placeholder="Secret" value="">
-		<button type="button" id="connect">Connect</button>
-		<button type="button" id="setup-gui" disabled>Setup</button>
-		<button type="button" class="destructive" id="end" disabled>End</button>
-	</header>
-	<section id="terminal"></section>
-	<footer>
-		<p>Powered by <a href="https://solarnetwork.github.io/">SolarNetwork</a>.</p>
-	</footer>
-	<dialog id="ssh-credentials-dialog">
-		<form method="dialog">
-			<p>Enter your SolarNode SSH credentials, or use <b>Skip</b> (or type <kbd>Esc</kbd>)
-				to skip SSH access and only access the SolarNode Setup GUI.</p>
-			<div class="hboxrow">
-				<input type="text" name="user" placeholder="Username" value="solar"
-					autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-				<input type="password" name="pass" placeholder="Password" value="">
-				<button type="submit" value="login">Login</button>
-				<button type="submit" class="secondary" value="skip">Skip</button>
-			</div>
-		</form>
-	</dialog>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=570" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <title>SolarSSH Terminal</title>
+    <link type="text/css" rel="stylesheet" href="css/dialog-polyfill.css" />
+    <link type="text/css" rel="stylesheet" href="css/xterm.css" />
+    <link type="text/css" rel="stylesheet" href="css/solarssh.css" />
+  </head>
+  <body>
+    <header class="hboxrow">
+      <h1>
+        SolarNode
+        <span id="node-id" class="node-id" contenteditable="true"></span> SSH
+      </h1>
+      <input
+        type="text"
+        name="token"
+        placeholder="Token"
+        value=""
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+      />
+      <input type="password" name="secret" placeholder="Secret" value="" />
+      <button type="button" id="connect">Connect</button>
+      <button type="button" id="setup-gui" disabled>Setup</button>
+      <button type="button" class="destructive" id="end" disabled>End</button>
+    </header>
+    <section id="terminal"></section>
+    <footer>
+      <p>
+        Version <%= VERSION %>. Powered by
+        <a href="https://solarnetwork.github.io/">SolarNetwork</a>.
+      </p>
+    </footer>
+    <dialog id="ssh-credentials-dialog">
+      <form method="dialog">
+        <p>
+          Enter your SolarNode SSH credentials, or use <b>Skip</b> (or type
+          <kbd>Esc</kbd>) to skip SSH access and only access the SolarNode Setup
+          GUI.
+        </p>
+        <div class="hboxrow">
+          <input
+            type="text"
+            name="user"
+            placeholder="Username"
+            value="solar"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <input type="password" name="pass" placeholder="Password" value="" />
+          <button type="submit" value="login">Login</button>
+          <button type="submit" class="secondary" value="skip">Skip</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
 </html>

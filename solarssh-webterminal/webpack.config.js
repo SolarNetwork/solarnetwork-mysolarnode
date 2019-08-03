@@ -69,6 +69,9 @@ const config = {
     ]
   },
   plugins: [
+    new webpack.DefinePlugin({
+      VERSION: JSON.stringify(require("./package.json").version)
+    }),
     new HtmlWebpackPlugin({ template: "./src/index.html" }),
     new webpack.IgnorePlugin(/^\.\/.*js.map$/, /.*xterm\/lib\/addons/)
   ]
