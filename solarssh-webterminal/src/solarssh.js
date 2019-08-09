@@ -15,10 +15,8 @@ import { json as jsonRequest } from "d3-request";
 import dialogPolyfill from "dialog-polyfill";
 import { Terminal } from "xterm";
 import * as attach from "xterm/lib/addons/attach/attach";
-import * as fit from "xterm/lib/addons/fit/fit";
 
 Terminal.applyAddon(attach);
-Terminal.applyAddon(fit);
 
 // for development, can un-comment out the sshEnv and instrEnv objects
 // and configure values for your local dev environment.
@@ -505,6 +503,7 @@ var solarSshApp = function(sshUrlHelper, options) {
       termWriteSuccess();
       socketState = 1;
       terminal.attach(socket);
+      terminal.focus();
     } else {
       termWriteFailed();
       termWriteBrightRed(
@@ -538,11 +537,8 @@ var solarSshApp = function(sshUrlHelper, options) {
       opts.cols = termSettings.cols;
       opts.rows = termSettings.lines;
     }
-    terminal = new Terminal();
-    terminal.open(document.getElementById("terminal"), true);
-    if (!opts.cols) {
-      terminal.fit();
-    }
+    terminal = new Terminal(opts);
+    terminal.open(document.getElementById("terminal"));
     termWriteGreeting();
     return self;
   }
