@@ -129,9 +129,6 @@ var solarSshApp = function(sshUrlHelper, options) {
 
   function resetWebSocket() {
     if (socket) {
-      if (terminal) {
-        terminal.detach(socket);
-      }
       socket.close();
       socket = undefined;
     }
