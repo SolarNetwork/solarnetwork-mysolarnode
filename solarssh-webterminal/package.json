@@ -1,6 +1,6 @@
 {
   "name": "solarssh-webterminal",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "SolarSSH Web Terminal",
   "keywords": [
     "solarnetwork",
@@ -42,7 +42,7 @@
     "prettier": "^1.16.1",
     "style-loader": "^0.23.1",
     "terser-webpack-plugin": "^1.2.1",
-    "webpack": "^4.29.0",
+    "webpack": "^4.39.3",
     "webpack-cli": "^3.2.1",
     "webpack-dev-server": "^3.1.14",
     "webpack-merge": "^4.1.0"
