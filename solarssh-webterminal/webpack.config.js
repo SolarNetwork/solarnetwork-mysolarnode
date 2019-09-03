@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const webpack = require("webpack");
 const path = require("path");
 
 const devtool = "source-map"; // cheap-module-eval-source-map
@@ -67,7 +68,13 @@ const config = {
       { test: /\.(gif|jpg|png)$/, use: "file-loader?name=assets/[name].[ext]" }
     ]
   },
-  plugins: [new HtmlWebpackPlugin({ template: "./src/index.html" })]
+  plugins: [
+    new webpack.DefinePlugin({
+      VERSION: JSON.stringify(require("./package.json").version)
+    }),
+    new HtmlWebpackPlugin({ template: "./src/index.html" }),
+    new webpack.IgnorePlugin(/^\.\/.*js.map$/, /.*xterm\/lib\/addons/)
+  ]
 };
 
 module.exports = config;
