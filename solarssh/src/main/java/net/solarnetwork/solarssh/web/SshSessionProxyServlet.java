@@ -35,6 +35,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.http.Header;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -42,6 +43,7 @@ import org.apache.http.message.BasicHeader;
 import org.mitre.dsmiley.httpproxy.ProxyServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 
 import net.solarnetwork.solarssh.domain.SshSession;
 
@@ -49,7 +51,7 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * Extension of {@link ProxyServlet} to associate with a specific {@link SshSession}.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SshSessionProxyServlet extends ProxyServlet {
 
@@ -99,6 +101,12 @@ public class SshSessionProxyServlet extends ProxyServlet {
     this.session = session;
     this.proxyPath = proxyPath;
     this.servletConfig = GLOBAL_SERVLET_CONFIG;
+
+    // configure some additional no-copy headers
+    String[] headers = new String[] { HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN };
+    for (String header : headers) {
+      hopByHopHeaders.addHeader(new BasicHeader(header, null));
+    }
   }
 
   @Override
@@ -138,6 +146,20 @@ public class SshSessionProxyServlet extends ProxyServlet {
       LOG.debug("Remapped cookie {} path to {}", cookie, proxyPath);
       servletResponse.addCookie(responseCookie);
     }
+  }
+
+  @Override
+  protected void copyResponseHeader(HttpServletRequest servletRequest,
+      HttpServletResponse servletResponse, Header header) {
+    if (LOG.isTraceEnabled()) {
+      String headerName = header.getName();
+      if (hopByHopHeaders.containsHeader(headerName)) {
+        return;
+      }
+      String headerValue = header.getValue();
+      LOG.trace("Coying response header {}: {}", headerName, headerValue);
+    }
+    super.copyResponseHeader(servletRequest, servletResponse, header);
   }
 
   @Override

@@ -27,6 +27,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
@@ -36,7 +37,7 @@ import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
  * WebMVC configuration.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 @EnableWebMvc
 @Configuration
@@ -50,6 +51,12 @@ public class WebMvcConfig extends WebMvcConfigurerAdapter {
   @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs}")
   public void cleanupExpiredSessions() {
     httpProxyController.cleanupExpiredSessions();
+  }
+
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+    registry.addMapping("/**").allowCredentials(false).allowedOrigins("*").allowedHeaders("*")
+        .allowedMethods("*");
   }
 
 }
