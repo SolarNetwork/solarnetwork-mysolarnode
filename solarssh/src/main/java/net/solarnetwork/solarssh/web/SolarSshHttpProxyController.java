@@ -35,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,9 +48,8 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * Proxy controller for SolarNode over a reverse SSH tunnel.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
-@CrossOrigin
 @Controller
 public class SolarSshHttpProxyController {
 
