@@ -340,7 +340,8 @@ var solarSshApp = function(sshUrlHelper, options) {
                 " button to view the SolarNode setup GUI."
             );
             if (sshCredentials) {
-              connectWebSocket();
+              // wait a couple of seconds, to time for SSH to actually be established by node
+              setTimeout(connectWebSocket, 2000);
             } else {
               terminal.writeln(
                 "Use the " +
