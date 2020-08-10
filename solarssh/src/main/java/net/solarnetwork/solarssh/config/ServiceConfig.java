@@ -45,33 +45,32 @@ import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
  * @version 1.0
  */
 @Configuration
-@PropertySource("classpath:application.properties")
 @PropertySource(value = "classpath:application-test.properties", ignoreResourceNotFound = true)
 @EnableScheduling
 public class ServiceConfig {
 
-  @Value("${ssh.host}")
-  private String sshHost = "ssh.host:ssh.solarnetwork.net";
+  @Value("${ssh.host:ssh.solarnetwork.net}")
+  private String sshHost = "ssh.solarnetwork.net";
 
-  @Value("${ssh.port}")
+  @Value("${ssh.port:8022}")
   private int sshPort = 8022;
 
-  @Value("${ssh.keyResource}")
+  @Value("${ssh.keyResource:classpath:sshd-server-key}")
   private Resource sshKeyResource = new ClassPathResource("/sshd-server-key");
 
-  @Value("${ssh.keyPassword}")
+  @Value("${ssh.keyPassword:changeit}")
   private String sshKeyPassword = null;
 
-  @Value("${ssh.reversePort.min}")
+  @Value("${ssh.reversePort.min:50000}")
   private int sshReversePortMin = 50000;
 
-  @Value("${ssh.reversePort.max}")
+  @Value("${ssh.reversePort.max:65000}")
   private int sshReversePortMax = 65000;
 
-  @Value("${ssh.sessionExpireSeconds}")
+  @Value("${ssh.sessionExpireSeconds:300}")
   private int sessionExpireSeconds = 300;
 
-  @Value("${solarnet.baseUrl}")
+  @Value("${solarnet.baseUrl:https://data.solarnetwork.net}")
   private String solarNetBaseUrl = "https://data.solarnetwork.net";
 
   /**
@@ -90,7 +89,7 @@ public class ServiceConfig {
     return service;
   }
 
-  @Scheduled(fixedDelayString = "${ssh.sessionExpireCleanupJobMs}")
+  @Scheduled(fixedDelayString = "${ssh.sessionExpireCleanupJobMs:60000}")
   public void cleanupExpiredSessions() {
     solarSshService().cleanupExpiredSessions();
   }
