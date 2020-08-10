@@ -5,55 +5,37 @@ plugins {
     id 'eclipse-wtp'
 }
 
+description = 'SolarSSH Server'
+version = '0.1.0'
+archivesBaseName = 'solarssh'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
 repositories {
     jcenter()
     maven {
-        url "https://data.solarnetwork.net/archive/repository/solarnetwork-stage/"
+        url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/"
     }
 }
 
 ext {
-	bouncyCastleVersion = '1.57'
-	jacksonVersion = '2.8.7'
-	springVersion = '4.3.9.RELEASE'
-	slf4jVersion = '1.7.25'
-}
+	bouncyCastleVersion 	= '1.57'
+	checkstyleVersion 		= '8.34'
+    jacksonVersion 			= '2.11.1'
+    javaxAnnotationVersion 	= '1.3.2'
+    myBatisStarterVersion 	= '2.1.3'
+    postgresJdbcVersion 	= '42.2.14'
+    slf4jVersion 			= '1.7.30'
+	springVersion 			= '5.2.8.RELEASE'
+    sshdVersion				= '2.5.1'
 
-dependencies {
-	providedCompile 'javax.servlet:javax.servlet-api:3.1.0'	
-	providedCompile 'javax.websocket:javax.websocket-api:1.1'
-	
-	// JSON
-	compile "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
-	compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-	compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-	compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
-	
-	// Logging
-	compile "org.slf4j:jul-to-slf4j:${slf4jVersion}"
-	compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
-	compile "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
-	compile 'ch.qos.logback:logback-classic:1.2.3'
-	
-	// Spring
-	compile "org.springframework:spring-webmvc:${springVersion}"
-	compile "org.springframework:spring-websocket:${springVersion}"
-	
-	// SolarNetwork
-	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
-	
-	// SSH
-    compile 'org.apache.sshd:sshd-core:2.3.0'
-    compile "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
-    compile "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
-    compile 'net.i2p.crypto:eddsa:0.3.0'
-    
-    // HTTP
-    compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
-    
-    // Testing
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.mockito:mockito-core:2.8.47'
+    libraries = [
+        // Test dependencies.
+        hamcrest: 'org.hamcrest:hamcrest-library:1.3',
+        junit: 'junit:junit:4.12',
+        mockito: 'org.mockito:mockito-core:2.25.1'
+    ]
 }
 
 configurations.compile {
@@ -66,25 +48,52 @@ configurations.compile {
 	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+dependencies {
+	providedCompile 'javax.servlet:javax.servlet-api:3.1.0'	
+	providedCompile 'javax.websocket:javax.websocket-api:1.1'
+	
+	// JSON
+	implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
+	implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
+	implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
+	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
+	
+	// DB
+	runtime "org.postgresql:postgresql:${postgresJdbcVersion}"
 
-checkstyle {
-   toolVersion ="8.11" 
-}
+	// SN
+	implementation "net.solarnetwork.central:net.solarnetwork.central.common.dao.mybatis:2.6.0"
 
-eclipse {
-	project {
-		natures 'net.sf.eclipsecs.core.CheckstyleNature'
-		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
-	}
-	wtp {
-		facet {
-			facet name: 'jst.java', version: 1.8
-			facet name: 'jst.web', version: '3.1'
-			facet name: 'jst.jaxrs', version: '2.0'
-		}
-	}
+	// Logging
+	implementation "org.slf4j:jul-to-slf4j:${slf4jVersion}"
+	implementation "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
+	implementation "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
+	implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+	
+	// SSH
+    implementation "org.apache.sshd:sshd-netty:${sshdVersion}"
+    //implementation "org.apache.sshd:sshd-scp:${sshdVersion}"
+    //implementation "org.apache.sshd:sshd-sftp:${sshdVersion}"
+    implementation "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
+    implementation "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
+    implementation 'net.i2p.crypto:eddsa:0.3.0'
+
+	// Spring
+	compile "org.springframework:spring-webmvc:${springVersion}"
+	compile "org.springframework:spring-websocket:${springVersion}"
+	
+	// SolarNetwork
+	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
+	
+    // HTTP
+    compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
+    
+    // Testing
+	// Testing
+    testImplementation 	libraries.junit,
+		        		libraries.hamcrest,
+		                libraries.mockito
+	testImplementation 'ch.qos.logback:logback-classic:1.2.3'
 }
 
 jar {
@@ -103,4 +112,115 @@ war {
         attributes 'Implementation-Title': 'SolarSSH App',
                    'Implementation-Version': version
     }
+}
+
+[
+    compileJava,
+    compileTestJava
+].each() {
+    it.options.compilerArgs += [
+        "-Xlint:all",
+        "-Xlint:-options",
+        "-Xlint:-path",
+        "-Xlint:-try"
+    ]
+    it.options.encoding = "UTF-8"
+    if (rootProject.hasProperty('failOnWarnings') && rootProject.failOnWarnings.toBoolean()) {
+        it.options.compilerArgs += ["-Werror"]
+    }
+}
+
+compileTestJava {
+    options.compilerArgs += [
+        "-Xlint:-serial"
+    ]
+}
+
+jar.manifest {
+    attributes('Implementation-Title': name,
+    'Implementation-Version': version,
+    'Built-By': System.getProperty('user.name'),
+    'Built-JDK': System.getProperty('java.version'),
+    'Source-Compatibility': sourceCompatibility,
+    'Target-Compatibility': targetCompatibility)
+}
+
+javadoc.options {
+    encoding = 'UTF-8'
+    use = true
+    links 'https://docs.oracle.com/javase/8/docs/api/'
+    source = "8"
+}
+
+eclipse {
+	project {
+		natures 'net.sf.eclipsecs.core.CheckstyleNature'
+		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
+	}
+	wtp {
+		facet {
+			facet name: 'jst.java', version: 1.8
+			facet name: 'jst.web', version: '3.1'
+			facet name: 'jst.jaxrs', version: '2.0'
+		}
+	}
+}
+
+// Disable JavaDoc doclint on Java 8. It's annoying.
+if (JavaVersion.current().isJava8Compatible()) {
+    allprojects {
+        tasks.withType(Javadoc) {
+            options.addStringOption('Xdoclint:none', '-quiet')
+        }
+    }
+}
+
+// For jdk10 we must explicitly choose between html4 and html5, otherwise we get a warning
+if (JavaVersion.current().isJava10Compatible()) {
+    allprojects {
+        tasks.withType(Javadoc) {
+            options.addBooleanOption('html5', true)
+        }
+    }
+}
+
+checkstyle {
+    toolVersion = "${checkstyleVersion}"
+	configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+    ignoreFailures = false
+    if (rootProject.hasProperty("checkstyle.ignoreFailures")) {
+        ignoreFailures = rootProject.properties["checkstyle.ignoreFailures"].toBoolean()
+    }
+}
+
+checkstyleMain {
+    source = fileTree(dir: "src/main", include: "**/*.java")
+}
+
+checkstyleTest {
+    source = fileTree(dir: "src/test", include: "**/*.java")
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    classifier = 'javadoc'
+    archiveClassifier = 'javadoc'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+    archiveClassifier = 'sources'
+}
+
+// At a test failure, log the stack trace to the console so that we don't
+// have to open the HTML in a browser.
+test {
+    testLogging {
+        exceptionFormat = 'full'
+        showExceptions true
+        showCauses true
+        showStackTraces true
+    }
+    maxHeapSize = '1500m'
 }
