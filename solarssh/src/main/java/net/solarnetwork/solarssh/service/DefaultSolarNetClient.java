@@ -123,7 +123,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(dateHeaderName, authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
 
-    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers);
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
       log.trace("Got pending instructions JSON: {}", MAPPER.writeValueAsString(node));
@@ -152,7 +152,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(signedDateHeaderName(authorization), authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-    URLConnection conn = postForm(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers, params);
+    URLConnection conn = postForm(uri, MediaType.APPLICATION_JSON_VALUE, headers, params);
 
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
@@ -172,7 +172,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(signedDateHeaderName(authorization), authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
 
-    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers);
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
       log.trace("Got node metadata JSON: {}", MAPPER.writeValueAsString(node));
