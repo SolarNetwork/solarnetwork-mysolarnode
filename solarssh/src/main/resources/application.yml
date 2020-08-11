@@ -5,7 +5,6 @@ ssh:
 logging:
   level:
     ROOT: INFO
-    org.mybatis.spring.mapper.ClassPathMapperScanner: OFF
   pattern:
     console: "${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39}: %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
     file:  "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
@@ -22,6 +21,8 @@ spring:
     password: solarauth
     platform: postgres
     initialize: false
+    
+server.port: 8081
 
 ---
 spring:
@@ -31,13 +32,9 @@ debugMode: true
 
 logging:
   level:
-    com.zaxxer.hikari: TRACE
-    org.apache.sshd: DEBUG
-    org.springframework.dao: DEBUG
-    net.solarnetwork.solarsftp: TRACE
+    net.solarnetwork.solarssh: DEBUG
 
 ssh:
-  host: solarnetworkdev.net
+  host: ssh.solarnetworkdev.net
 
 solarnet.baseUrl: http://solarnetworkdev.net:8680
-solarssh.logdir: .
