@@ -1,5 +1,5 @@
 /* ==================================================================
- * DefaultSolarSshdService.java - Jun 11, 2017 3:42:49 PM
+ * DefaultSolarSshdServer.java - Jun 11, 2017 3:42:49 PM
  * 
  * Copyright 2017 SolarNetwork.net Dev Team
  * 
@@ -56,7 +56,7 @@ import net.solarnetwork.solarssh.service.SolarSshdService;
  * @author matt
  * @version 1.0
  */
-public class DefaultSolarSshdService implements SolarSshdService, SessionListener, ChannelListener {
+public class DefaultSolarSshdServer implements SolarSshdService, SessionListener, ChannelListener {
 
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 8022;
@@ -75,12 +75,12 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
    * @param sessionDao
    *        the session DAO to use
    */
-  public DefaultSolarSshdService(SshSessionDao sessionDao) {
+  public DefaultSolarSshdServer(SshSessionDao sessionDao) {
     super();
     this.sessionDao = sessionDao;
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdServer.class);
 
   /**
    * Start the server.

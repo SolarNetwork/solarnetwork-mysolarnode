@@ -39,7 +39,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import net.solarnetwork.solarssh.impl.DefaultSolarNetClient;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshService;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshdDirectServer;
-import net.solarnetwork.solarssh.impl.DefaultSolarSshdService;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshdServer;
 import net.solarnetwork.solarssh.impl.JdbcActorDao;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
@@ -129,8 +129,8 @@ public class ServiceConfig {
    * @return the service.
    */
   @Bean(initMethod = "start", destroyMethod = "stop")
-  public DefaultSolarSshdService solarSshdService() {
-    DefaultSolarSshdService service = new DefaultSolarSshdService(solarSshService());
+  public DefaultSolarSshdServer solarSshdService() {
+    DefaultSolarSshdServer service = new DefaultSolarSshdServer(solarSshService());
     service.setPort(sshPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
