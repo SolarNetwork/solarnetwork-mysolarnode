@@ -31,6 +31,11 @@ public final class Globals {
   /** A global "audit" logger for audit events to be logged to. */
   public static final Logger AUDIT_LOG = LoggerFactory.getLogger("SolarSshService.AUDIT");
 
+  /**
+   * The default value for the {@code snHost} property.
+   */
+  public static final String DEFAULT_SN_HOST = "data.solarnetwork.net";
+
   private Globals() {
     // can't construct me
   }

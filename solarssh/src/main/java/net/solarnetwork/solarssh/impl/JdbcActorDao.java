@@ -23,6 +23,7 @@
 package net.solarnetwork.solarssh.impl;
 
 import static java.lang.System.currentTimeMillis;
+import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
 import static net.solarnetwork.util.StringUtils.delimitedStringToMap;
 import static net.solarnetwork.web.security.AuthorizationV2Builder.httpDate;
 
@@ -43,7 +44,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.PreparedStatementCreator;
-import org.springframework.stereotype.Repository;
 
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.Actor;
@@ -56,13 +56,7 @@ import net.solarnetwork.web.security.AuthorizationV2Builder;
  * @author matt
  * @version 1.0
  */
-@Repository
 public class JdbcActorDao implements ActorDao {
-
-  /**
-   * The default value for the {@code snHost} property.
-   */
-  public static final String DEFAULT_SN_HOST = "data.solarnetwork.net";
 
   /**
    * The default value for the {@code snHost} property.
@@ -97,7 +91,12 @@ public class JdbcActorDao implements ActorDao {
   private String snPath = DEFAULT_SN_PATH;
   private Cache<String, Actor> actorCache;
 
-  @Autowired
+  /**
+   * Constructor.
+   * 
+   * @param jdbcOps
+   *        the JDBC ops to use
+   */
   public JdbcActorDao(JdbcOperations jdbcOps) {
     super();
     this.jdbcOps = jdbcOps;
@@ -299,7 +298,7 @@ public class JdbcActorDao implements ActorDao {
   /**
    * Get the configured SolarNetwork host.
    * 
-   * @return the host; defaults to {@link #DEFAULT_SN_HOST}
+   * @return the host; defaults to {@link net.solarnetwork.solarssh.Globals#DEFAULT_SN_HOST}
    */
   public String getSnHost() {
     return snHost;

@@ -53,9 +53,7 @@ public class SshSessionForwardFilter extends RejectAllForwardingFilter {
   @Override
   public boolean canConnect(Type type, SshdSocketAddress address, Session session) {
     if (type == Type.Direct) {
-      // allow direct-tcpip connections to reverse SSH port on localhost
-      String sessionId = session.getUsername();
-      SshSession sess = sessionDao.findOne(sessionId);
+      SshSession sess = sessionDao.findOne(session);
       return (sess != null && SshdSocketAddress.isLoopback(address.getHostName())
           && address.getPort() == sess.getReverseSshPort());
     }

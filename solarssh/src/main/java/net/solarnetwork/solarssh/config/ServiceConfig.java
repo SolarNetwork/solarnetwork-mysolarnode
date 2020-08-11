@@ -22,6 +22,8 @@
 
 package net.solarnetwork.solarssh.config;
 
+import java.net.URI;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,14 +32,15 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.impl.DefaultSolarNetClient;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshService;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshdDirectServer;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshdService;
+import net.solarnetwork.solarssh.impl.JdbcActorDao;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
 
@@ -80,7 +83,7 @@ public class ServiceConfig {
   private int sshDirectPort = 9022;
 
   @Autowired
-  private ActorDao actorDao;
+  private JdbcOperations jdbcOps;
 
   /**
    * Initialize the {@link SolarSshService} service.
@@ -142,11 +145,32 @@ public class ServiceConfig {
   @Bean(initMethod = "start", destroyMethod = "stop")
   public DefaultSolarSshdDirectServer solarSshdDirectService() {
     DefaultSolarSshdDirectServer service = new DefaultSolarSshdDirectServer(solarSshService(),
-        actorDao);
+        actorDao());
     service.setPort(sshDirectPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
+    service.setSnHost(snHost());
     return service;
+  }
+
+  private String snHost() {
+    URI uri = URI.create(solarNetBaseUrl);
+    String snHost = uri.getHost();
+    if (uri.getPort() > 0) {
+      snHost += ":" + uri.getPort();
+    }
+    return snHost;
+  }
+
+  /**
+   * Get the actor DAO.
+   * 
+   * @return the actor DAO
+   */
+  @Bean
+  public JdbcActorDao actorDao() {
+    JdbcActorDao dao = new JdbcActorDao(jdbcOps);
+    return dao;
   }
 
 }

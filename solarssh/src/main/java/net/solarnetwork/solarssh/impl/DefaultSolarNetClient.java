@@ -77,6 +77,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
 
   private String apiBaseUrl = "https://data.solarnetwork.net";
   private String viewPendingInstructionsPath = "/solaruser/api/v1/sec/instr/viewPending";
+  private String getInstructionPath = "/solaruser/api/v1/sec/instr/view";
   private String queueInstructionPath = "/solaruser/api/v1/sec/instr/add";
   private String viewNodeMetadataPath = "/solaruser/api/v1/sec/nodes/meta/";
 
@@ -140,7 +141,29 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
   }
 
   @Override
-  public Long queueInstruction(String topic, Long nodeId, Map<String, Object> parameters,
+  public SolarNetInstruction getInstruction(Long id, long authorizationDate, String authorization)
+      throws IOException {
+    String dateHeaderName = signedDateHeaderName(authorization);
+    URI uri = apiUri(getInstructionPath + "?id=" + id);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.HOST, uriHost(uri));
+    headers.setDate(dateHeaderName, authorizationDate);
+    headers.set(HttpHeaders.AUTHORIZATION, authorization);
+
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
+    JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
+    if (log.isTraceEnabled()) {
+      log.trace("Got instructions JSON: {}", MAPPER.writeValueAsString(node));
+    }
+    JsonNode data = node.path("data");
+    SolarNetInstruction result = MAPPER.readValue(MAPPER.treeAsTokens(data),
+        SolarNetInstruction.class);
+    return result;
+  }
+
+  @Override
+  public Long queueInstruction(String topic, Long nodeId, Map<String, ?> parameters,
       long authorizationDate, String authorization) throws IOException {
     URI uri = apiUri(queueInstructionPath);
 
@@ -274,6 +297,10 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
 
   public void setViewNodeMetadataPath(String viewNodeMetadataPath) {
     this.viewNodeMetadataPath = viewNodeMetadataPath;
+  }
+
+  public void setGetInstructionPath(String getInstructionPath) {
+    this.getInstructionPath = getInstructionPath;
   }
 
 }

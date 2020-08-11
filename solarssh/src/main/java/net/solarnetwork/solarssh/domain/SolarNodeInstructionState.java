@@ -36,6 +36,11 @@ public enum SolarNodeInstructionState {
   Unknown,
 
   /**
+   * The instruction is being queued.
+   */
+  Queuing,
+
+  /**
    * The instruction has been queued, but not acknowledged yet.
    */
   Queued,

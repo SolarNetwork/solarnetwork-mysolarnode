@@ -22,17 +22,19 @@
 
 package net.solarnetwork.solarssh.impl;
 
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
+import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.sshd.common.FactoryManager;
 import org.apache.sshd.common.channel.Channel;
 import org.apache.sshd.common.channel.ChannelListener;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
@@ -49,8 +51,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 
 import net.solarnetwork.solarssh.dao.ActorDao;
-import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.service.SolarSshService;
 
 /**
  * Default SSH server service.
@@ -63,12 +65,19 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 9022;
 
+  /**
+   * The default value for the {@code authTimeoutSecs} property.
+   */
+  public static final int DEFAULT_AUTH_TIMEOUT_SECS = 300;
+
   private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdDirectServer.class);
 
-  private final SshSessionDao sessionDao;
+  private final SolarSshService solarSshService;
   private final ActorDao actorDao;
 
+  private String snHost = DEFAULT_SN_HOST;
   private int port = DEFAULT_LISTEN_PORT;
+  private int authTimeoutSecs = DEFAULT_AUTH_TIMEOUT_SECS;
   private Resource serverKeyResource;
   private String serverKeyPassword;
 
@@ -77,12 +86,14 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
   /**
    * Constructor.
    * 
-   * @param sessionDao
-   *        the session DAO to use
+   * @param solarSshService
+   *        the SolarSshService to use
+   * @param actorDao
+   *        the actor DAO to use
    */
-  public DefaultSolarSshdDirectServer(SshSessionDao sessionDao, ActorDao actorDao) {
+  public DefaultSolarSshdDirectServer(SolarSshService solarSshService, ActorDao actorDao) {
     super();
-    this.sessionDao = sessionDao;
+    this.solarSshService = solarSshService;
     this.actorDao = actorDao;
   }
 
@@ -97,8 +108,8 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
     s = SshServer.setUpDefaultServer();
     s.setPort(port);
 
-    s.setChannelFactories(Collections.unmodifiableList(
-        Arrays.asList(ChannelSessionFactory.INSTANCE, new DynamicDirectTcpipFactory())));
+    s.setChannelFactories(unmodifiableList(
+        asList(ChannelSessionFactory.INSTANCE, new DynamicDirectTcpipFactory(solarSshService))));
 
     try {
       FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
@@ -110,12 +121,17 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
       throw new RuntimeException(e);
     }
 
-    s.setPasswordAuthenticator(new SolarSshPasswordAuthenticator(sessionDao, actorDao));
+    SolarSshPasswordAuthenticator pwAuth = new SolarSshPasswordAuthenticator(solarSshService,
+        actorDao);
+    pwAuth.setSnHost(snHost);
+    s.setPasswordAuthenticator(pwAuth);
 
-    s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
+    s.setForwardingFilter(new SshSessionForwardFilter(solarSshService));
 
     s.addSessionListener(this);
     s.addChannelListener(this);
+
+    s.getProperties().put(FactoryManager.AUTH_TIMEOUT, authTimeoutSecs * 1000L);
 
     try {
       s.start();
@@ -157,7 +173,7 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
   public void sessionEvent(Session session, Event event) {
     if (event == SessionListener.Event.Authenticated) {
       String sessionId = session.getUsername();
-      SshSession sess = sessionDao.findOne(sessionId);
+      SshSession sess = solarSshService.findOne(sessionId);
       if (sess != null) {
         sess.setEstablished(true);
         sess.setServerSession(session);
@@ -185,7 +201,7 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
     String sessionId = session.getUsername();
     if (sessionId != null) {
       logSessionClosed(session, null);
-      SshSession sess = sessionDao.findOne(sessionId);
+      SshSession sess = solarSshService.findOne(sessionId);
       if (sess != null) {
         // check if matching remote address
         SocketAddress closedSessionRemoteAddress = null;
@@ -203,7 +219,7 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
         }
         if (closedSessionRemoteAddress == null || daoSessionRemoteAddress == null
             || closedSessionRemoteAddress.equals(daoSessionRemoteAddress)) {
-          sessionDao.delete(sess);
+          solarSshService.delete(sess);
         }
       }
     }
@@ -211,7 +227,7 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
 
   private Map<String, Object> auditEventMap(Session session, String eventName) {
     String sessionId = session.getUsername();
-    SshSession sess = sessionDao.findOne(sessionId);
+    SshSession sess = solarSshService.findOne(sessionId);
     Map<String, Object> map;
     if (sess != null) {
       map = sess.auditEventMap(eventName);
@@ -288,6 +304,36 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
    */
   public void setServerKeyPassword(String serverKeyPassword) {
     this.serverKeyPassword = serverKeyPassword;
+  }
+
+  /**
+   * Set the SolarNetwork host to use.
+   * 
+   * @param snHost
+   *        the host
+   * @throws IllegalArgumentException
+   *         if {@code snHost} is {@literal null}
+   */
+  public void setSnHost(String snHost) {
+    if (snHost == null) {
+      throw new IllegalArgumentException("snHost must not be null");
+    }
+    this.snHost = snHost;
+  }
+
+  /**
+   * Set the authorization timeout value, in seconds.
+   * 
+   * <p>
+   * This must be large enough to allow for SolarNode devices to handle the
+   * {@literal StartRemoteSsh} instruction.
+   * </p>
+   * 
+   * @param authTimeoutSecs
+   *        the timeout seconds
+   */
+  public void setAuthTimeoutSecs(int authTimeoutSecs) {
+    this.authTimeoutSecs = authTimeoutSecs;
   }
 
 }

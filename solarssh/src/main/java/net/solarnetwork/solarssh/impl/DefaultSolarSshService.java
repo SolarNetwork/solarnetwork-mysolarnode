@@ -29,7 +29,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +53,7 @@ import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
+import net.solarnetwork.solarssh.domain.SolarNodeInstructionState;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
@@ -111,6 +111,17 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new IllegalArgumentException("Null value not allowed.");
     }
     return sessionMap.get(id);
+  }
+
+  @Override
+  public SshSession findOne(final Session session) {
+    if (session == null) {
+      throw new IllegalArgumentException("Null value not allowed.");
+    }
+    return sessionMap.values().stream().filter(e -> {
+      return e.getServerSession() == session || e.getDirectServerSession() == session
+          || e.getClientSession() == session;
+    }).findAny().orElse(null);
   }
 
   @Override
@@ -175,6 +186,13 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   }
 
   @Override
+  public SolarNodeInstructionState getInstructionState(Long id, long authorizationDate,
+      String authorization) throws IOException {
+    SolarNetInstruction instr = solarNetClient.getInstruction(id, authorizationDate, authorization);
+    return (instr != null ? instr.getState() : SolarNodeInstructionState.Unknown);
+  }
+
+  @Override
   public SshSession startSession(String sessionId, long authorizationDate, String authorization)
       throws IOException {
     SshSession sess = sessionMap.get(sessionId);
@@ -182,7 +200,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new AuthorizationException("Session " + sessionId + " not available");
     }
 
-    Map<String, Object> instructionParams = createRemoteSshInstructionParams(sess);
+    Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
     Long instructionId = solarNetClient.queueInstruction("StartRemoteSsh", sess.getNodeId(),
         instructionParams, authorizationDate, authorization);
@@ -283,7 +301,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new AuthorizationException("Session " + sessionId + " not available");
     }
 
-    Map<String, Object> instructionParams = createRemoteSshInstructionParams(sess);
+    Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
     Long instructionId = solarNetClient.queueInstruction("StopRemoteSsh", sess.getNodeId(),
         instructionParams, authorizationDate, authorization);
@@ -324,15 +342,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     }
   }
 
-  private Map<String, Object> createRemoteSshInstructionParams(SshSession sess) {
-    Map<String, Object> instructionParams = new HashMap<>(4);
-    addInstructionParam(instructionParams, HOST_PARAM, sess.getSshHost());
-    addInstructionParam(instructionParams, USER_PARAM, sess.getId());
-    addInstructionParam(instructionParams, PORT_PARAM, sess.getSshPort());
-    addInstructionParam(instructionParams, REVERSE_PORT_PARAM, sess.getReverseSshPort());
-    return instructionParams;
-  }
-
   /**
    * Call periodically to free expired sessions.
    */
@@ -352,12 +361,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
         sessionMap.remove(sess.getId(), sess);
       }
     }
-  }
-
-  private void addInstructionParam(Map<String, Object> params, String key, Object value) {
-    int index = (params.size() / 2);
-    params.put("parameters[" + index + "].name", key);
-    params.put("parameters[" + index + "].value", value);
   }
 
   public void setMinPort(int minPort) {

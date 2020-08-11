@@ -49,6 +49,9 @@ import org.apache.sshd.server.forward.TcpForwardingFilter.Type;
 import org.apache.sshd.server.forward.TcpipServerChannel;
 import org.apache.sshd.server.forward.TcpipServerChannel.TcpipFactory;
 
+import net.solarnetwork.solarssh.dao.SshSessionDao;
+import net.solarnetwork.solarssh.domain.SshSession;
+
 /**
  * Factory for dynamically-allocated direct-tcpip ports.
  * 
@@ -58,26 +61,40 @@ import org.apache.sshd.server.forward.TcpipServerChannel.TcpipFactory;
 public class DynamicDirectTcpipFactory extends TcpipFactory {
 
   private final String fixedDestinationHost;
+  private final SshSessionDao sessionDao;
 
   /**
    * Constructor.
+   * 
+   * @param sessionDao
+   *        the session DAO
    */
-  public DynamicDirectTcpipFactory() {
-    this("127.0.0.1");
+  public DynamicDirectTcpipFactory(SshSessionDao sessionDao) {
+    this(sessionDao, "127.0.0.1");
   }
 
   /**
    * Constructor.
+   * 
+   * @param sessionDao
+   *        the session DAO
+   * @param fixedDestinationHost
+   *        the fixed destination host
    */
-  public DynamicDirectTcpipFactory(String fixedDestinationHost) {
+  public DynamicDirectTcpipFactory(SshSessionDao sessionDao, String fixedDestinationHost) {
     super(Type.Direct);
+    this.sessionDao = sessionDao;
     this.fixedDestinationHost = fixedDestinationHost;
   }
 
   @Override
   public Channel createChannel(Session session) throws IOException {
     // TODO get port from session (or allocate dynamic port now?)
-    int port = 50000;
+    SshSession sshSession = sessionDao.findOne(session);
+    if (sshSession == null) {
+      throw new IllegalArgumentException("No SshSession available.");
+    }
+    int port = sshSession.getReverseSshPort();
     return new ReservedTcpIpServerChannel(port, getType(),
         ThreadUtils.noClose(getExecutorService()));
   }
