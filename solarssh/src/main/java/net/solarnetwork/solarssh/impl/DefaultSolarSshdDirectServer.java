@@ -1,5 +1,5 @@
 /* ==================================================================
- * DefaultSolarSftpServer.java - 11/08/2020 6:59:41 AM
+ * DefaultSolarSshdDirectServer.java - 11/08/2020 6:59:41 AM
  * 
  * Copyright 2020 SolarNetwork SolarNetwork.net Dev Team
  * 
@@ -27,6 +27,8 @@ import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,11 +42,13 @@ import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.common.session.helpers.AbstractSession;
 import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.channel.ChannelSessionFactory;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 
+import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
 
@@ -54,14 +58,15 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * @author matt
  * @version 1.0
  */
-public class DefaultSolarSftpServer implements SessionListener, ChannelListener {
+public class DefaultSolarSshdDirectServer implements SessionListener, ChannelListener {
 
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 9022;
 
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSftpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdDirectServer.class);
 
   private final SshSessionDao sessionDao;
+  private final ActorDao actorDao;
 
   private int port = DEFAULT_LISTEN_PORT;
   private Resource serverKeyResource;
@@ -75,9 +80,10 @@ public class DefaultSolarSftpServer implements SessionListener, ChannelListener 
    * @param sessionDao
    *        the session DAO to use
    */
-  public DefaultSolarSftpServer(SshSessionDao sessionDao) {
+  public DefaultSolarSshdDirectServer(SshSessionDao sessionDao, ActorDao actorDao) {
     super();
     this.sessionDao = sessionDao;
+    this.actorDao = actorDao;
   }
 
   /**
@@ -91,6 +97,9 @@ public class DefaultSolarSftpServer implements SessionListener, ChannelListener 
     s = SshServer.setUpDefaultServer();
     s.setPort(port);
 
+    s.setChannelFactories(Collections.unmodifiableList(
+        Arrays.asList(ChannelSessionFactory.INSTANCE, new DynamicDirectTcpipFactory())));
+
     try {
       FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
           serverKeyResource.getFile().toPath());
@@ -101,7 +110,7 @@ public class DefaultSolarSftpServer implements SessionListener, ChannelListener 
       throw new RuntimeException(e);
     }
 
-    s.setPasswordAuthenticator(new SolarSshPasswordAuthenticator(sessionDao));
+    s.setPasswordAuthenticator(new SolarSshPasswordAuthenticator(sessionDao, actorDao));
 
     s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
 

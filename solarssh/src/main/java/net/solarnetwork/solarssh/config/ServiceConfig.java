@@ -22,6 +22,7 @@
 
 package net.solarnetwork.solarssh.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,9 +33,10 @@ import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.impl.DefaultSolarNetClient;
-import net.solarnetwork.solarssh.impl.DefaultSolarSftpServer;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshService;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshdDirectServer;
 import net.solarnetwork.solarssh.impl.DefaultSolarSshdService;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
@@ -76,6 +78,9 @@ public class ServiceConfig {
 
   @Value("${ssh.direct.port:9022}")
   private int sshDirectPort = 9022;
+
+  @Autowired
+  private ActorDao actorDao;
 
   /**
    * Initialize the {@link SolarSshService} service.
@@ -135,8 +140,9 @@ public class ServiceConfig {
    * @return the service.
    */
   @Bean(initMethod = "start", destroyMethod = "stop")
-  public DefaultSolarSftpServer solarSshdDirectService() {
-    DefaultSolarSftpServer service = new DefaultSolarSftpServer(solarSshService());
+  public DefaultSolarSshdDirectServer solarSshdDirectService() {
+    DefaultSolarSshdDirectServer service = new DefaultSolarSshdDirectServer(solarSshService(),
+        actorDao);
     service.setPort(sshDirectPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);

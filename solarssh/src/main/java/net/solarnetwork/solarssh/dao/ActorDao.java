@@ -33,14 +33,16 @@ import net.solarnetwork.solarssh.domain.Actor;
 public interface ActorDao {
 
   /**
-   * Get an actor that has had token credentials verified.
+   * Get an actor that has had token credentials verified for a specific node ID.
    * 
+   * @param nodeId
+   *        the node ID
    * @param tokenId
    *        the token to verify
    * @param tokenSecret
    *        the token secret
    * @return the actor, or {@literal null} if the validated actor cannot be found
    */
-  Actor getAuthenticatedActor(String tokenId, String tokenSecret);
+  Actor getAuthenticatedActor(Long nodeId, String tokenId, String tokenSecret);
 
 }

@@ -10,13 +10,6 @@ logging:
     console: "${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39}: %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
     file:  "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
 
-mybatis:
-  configuration:
-    map-underscore-to-camel-case: true
-    default-fetch-size: 100
-    default-statement-timeout: 30
-#  mapper-locations: "classpath:net/solarnetwork/solarsftp/dao/mybatis/map/*.xml"
-
 spring:
   datasource:
     hikari:
@@ -25,8 +18,8 @@ spring:
       idleTimeout: 600000
       maxLifetime: 1800000
     url: jdbc:postgresql://localhost:5496/solarnetwork
-    username: solarnet
-    password: solarnet
+    username: solarauth
+    password: solarauth
     platform: postgres
     initialize: false
 
@@ -38,7 +31,9 @@ debugMode: true
 
 logging:
   level:
+    com.zaxxer.hikari: TRACE
     org.apache.sshd: DEBUG
+    org.springframework.dao: DEBUG
     net.solarnetwork.solarsftp: TRACE
 
 ssh:

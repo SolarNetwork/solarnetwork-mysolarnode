@@ -27,7 +27,9 @@ import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.PasswordChangeRequiredException;
 import org.apache.sshd.server.session.ServerSession;
 
+import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
+import net.solarnetwork.solarssh.domain.Actor;
 
 /**
  * {@link PasswordAuthenticator} for direct SolarSSH connections.
@@ -38,24 +40,40 @@ import net.solarnetwork.solarssh.dao.SshSessionDao;
 public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
 
   private final SshSessionDao sessionDao;
+  private final ActorDao actorDao;
 
   /**
    * Constructor.
    * 
    * @param sessionDao
    *        the DAO to access sessions with
+   * @param actorDao
+   *        the authentication DAO
    */
-  public SolarSshPasswordAuthenticator(SshSessionDao sessionDao) {
+  public SolarSshPasswordAuthenticator(SshSessionDao sessionDao, ActorDao actorDao) {
     super();
     this.sessionDao = sessionDao;
+    this.actorDao = actorDao;
   }
 
   @Override
   public boolean authenticate(String username, String password, ServerSession session)
       throws PasswordChangeRequiredException, AsyncAuthException {
-    // username/password is a SolarNetwork authentication token
-    // TODO Auto-generated method stub
-    return false;
+    // username is in form nodeId:tokenId
+    String[] components = username.split(":", 2);
+    if (components.length < 2) {
+      return false;
+    }
+    Long nodeId;
+    try {
+      nodeId = Long.valueOf(components[0]);
+    } catch (NumberFormatException e) {
+      return false;
+    }
+    String tokenId = components[1];
+    Actor actor = actorDao.getAuthenticatedActor(nodeId, tokenId, password);
+    // TODO: allocate dynamic port, issue StartRemoteSsh instruction
+    return actor != null;
   }
 
 }
