@@ -20,7 +20,7 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.service;
+package net.solarnetwork.solarssh.impl;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -51,6 +51,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
+import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.support.HttpClientSupport;
 import net.solarnetwork.web.security.WebConstants;
 

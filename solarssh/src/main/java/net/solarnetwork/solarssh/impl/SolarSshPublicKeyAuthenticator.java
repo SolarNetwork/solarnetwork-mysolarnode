@@ -1,5 +1,5 @@
 /* ==================================================================
- * SshSessionForwardFilter.java - 21/06/2017 11:46:13 AM
+ * SolarSshPublicKeyAuthenticator.java - 21/06/2017 11:46:13 AM
  * 
  * Copyright 2017 SolarNetwork.net Dev Team
  * 
@@ -20,43 +20,49 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
-import org.apache.sshd.common.session.Session;
-import org.apache.sshd.common.util.net.SshdSocketAddress;
-import org.apache.sshd.server.forward.ForwardingFilter;
-import org.apache.sshd.server.forward.RejectAllForwardingFilter;
+import java.security.PublicKey;
+
+import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
+import org.apache.sshd.server.session.ServerSession;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
 
 /**
- * {@link ForwardingFilter} that allows only listening on the loopback host using the
- * {@link SshSession#getReverseSshPort()} configured with the connection.
+ * Supports SSH public key authentication for active SSH sessions.
  * 
  * <p>
- * The {@link SshSession#getReverseSshPort()} +1 port is also allowed.
+ * The presented {@code username} values must be existing session IDs.
  * </p>
  * 
  * @author matt
  * @version 1.0
  */
-public class SshSessionForwardFilter extends RejectAllForwardingFilter {
+public class SolarSshPublicKeyAuthenticator implements PublickeyAuthenticator {
 
   private final SshSessionDao sessionDao;
 
-  public SshSessionForwardFilter(SshSessionDao sessionDao) {
+  /**
+   * Constructor.
+   * 
+   * @param sessionDao
+   *        the DAO to access sessions with
+   */
+  public SolarSshPublicKeyAuthenticator(SshSessionDao sessionDao) {
     super();
     this.sessionDao = sessionDao;
   }
 
   @Override
-  public boolean canListen(SshdSocketAddress address, Session session) {
-    String sessionId = session.getUsername();
-    SshSession sess = sessionDao.findOne(sessionId);
-    return (sess != null && SshdSocketAddress.isLoopback(address.getHostName())
-        && (address.getPort() == sess.getReverseSshPort()
-            || address.getPort() == sess.getReverseSshPort() + 1));
+  public boolean authenticate(String username, PublicKey key, ServerSession session) {
+    SshSession sess = sessionDao.findOne(username);
+    if (sess == null) {
+      return false;
+    }
+    // TODO: validate
+    return true;
   }
 
 }

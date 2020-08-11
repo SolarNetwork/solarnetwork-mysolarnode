@@ -1,7 +1,7 @@
 /* ==================================================================
- * SolarSshPublicKeyAuthenticator.java - 21/06/2017 11:46:13 AM
+ * SolarSshPasswordAuthenticator.java - 11/08/2020 11:08:31 AM
  * 
- * Copyright 2017 SolarNetwork.net Dev Team
+ * Copyright 2020 SolarNetwork.net Dev Team
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -20,27 +20,22 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
-import java.security.PublicKey;
-
-import org.apache.sshd.server.auth.pubkey.PublickeyAuthenticator;
+import org.apache.sshd.server.auth.AsyncAuthException;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.auth.password.PasswordChangeRequiredException;
 import org.apache.sshd.server.session.ServerSession;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
-import net.solarnetwork.solarssh.domain.SshSession;
 
 /**
- * Supports SSH public key authentication for active SSH sessions.
- * 
- * <p>
- * The presented {@code username} values must be existing session IDs.
- * </p>
+ * {@link PasswordAuthenticator} for direct SolarSSH connections.
  * 
  * @author matt
  * @version 1.0
  */
-public class SolarSshPublicKeyAuthenticator implements PublickeyAuthenticator {
+public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
 
   private final SshSessionDao sessionDao;
 
@@ -50,19 +45,17 @@ public class SolarSshPublicKeyAuthenticator implements PublickeyAuthenticator {
    * @param sessionDao
    *        the DAO to access sessions with
    */
-  public SolarSshPublicKeyAuthenticator(SshSessionDao sessionDao) {
+  public SolarSshPasswordAuthenticator(SshSessionDao sessionDao) {
     super();
     this.sessionDao = sessionDao;
   }
 
   @Override
-  public boolean authenticate(String username, PublicKey key, ServerSession session) {
-    SshSession sess = sessionDao.findOne(username);
-    if (sess == null) {
-      return false;
-    }
-    // TODO: validate
-    return true;
+  public boolean authenticate(String username, String password, ServerSession session)
+      throws PasswordChangeRequiredException, AsyncAuthException {
+    // username/password is a SolarNetwork authentication token
+    // TODO Auto-generated method stub
+    return false;
   }
 
 }

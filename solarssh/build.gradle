@@ -3,20 +3,29 @@ plugins {
     id 'war'
     id 'checkstyle'
     id 'eclipse-wtp'
+    id 'org.springframework.boot' version '2.3.2.RELEASE'
 }
 
+apply plugin: 'checkstyle'
+apply plugin: 'java'
+apply plugin: 'io.spring.dependency-management'
+
 description = 'SolarSSH Server'
-version = '0.1.0'
 archivesBaseName = 'solarssh'
+
+dependencyManagement {
+	imports {
+		mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+	}
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
     jcenter()
-    maven {
-        url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/"
-    }
+    mavenLocal()
+    maven { url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/" }
 }
 
 ext {
@@ -44,14 +53,16 @@ configurations.compile {
 	exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
 	exclude group: 'org.osgi'
 	exclude group: 'org.springframework', module: 'spring-messaging'
-	exclude group: 'org.springframework', module: 'spring-tx'
+	exclude group: 'org.springframework.security'
 	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
 }
 
 dependencies {
-	providedCompile 'javax.servlet:javax.servlet-api:3.1.0'	
-	providedCompile 'javax.websocket:javax.websocket-api:1.1'
-	
+	// Spring
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
 	// JSON
 	implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
 	implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
@@ -61,9 +72,6 @@ dependencies {
 	// DB
 	runtime "org.postgresql:postgresql:${postgresJdbcVersion}"
 
-	// SN
-	implementation "net.solarnetwork.central:net.solarnetwork.central.common.dao.mybatis:2.6.0"
-
 	// Logging
 	implementation "org.slf4j:jul-to-slf4j:${slf4jVersion}"
 	implementation "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
@@ -72,18 +80,13 @@ dependencies {
 	
 	// SSH
     implementation "org.apache.sshd:sshd-netty:${sshdVersion}"
-    //implementation "org.apache.sshd:sshd-scp:${sshdVersion}"
-    //implementation "org.apache.sshd:sshd-sftp:${sshdVersion}"
     implementation "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
     implementation "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
     implementation 'net.i2p.crypto:eddsa:0.3.0'
 
-	// Spring
-	compile "org.springframework:spring-webmvc:${springVersion}"
-	compile "org.springframework:spring-websocket:${springVersion}"
-	
 	// SolarNetwork
-	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.11+'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:1.17+'
+	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.16+'
 	
     // HTTP
     compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'

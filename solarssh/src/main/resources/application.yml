@@ -1,0 +1,48 @@
+ssh:
+  host: ssh.solarnetwork.net
+# TODO
+
+logging:
+  level:
+    ROOT: INFO
+    org.mybatis.spring.mapper.ClassPathMapperScanner: OFF
+  pattern:
+    console: "${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39}: %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+    file:  "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+#  mapper-locations: "classpath:net/solarnetwork/solarsftp/dao/mybatis/map/*.xml"
+
+spring:
+  datasource:
+    hikari:
+      minimumIdle: 0
+      connectionTimeout: 30000
+      idleTimeout: 600000
+      maxLifetime: 1800000
+    url: jdbc:postgresql://localhost:5496/solarnetwork
+    username: solarnet
+    password: solarnet
+    platform: postgres
+    initialize: false
+
+---
+spring:
+  profiles: development
+
+debugMode: true
+
+logging:
+  level:
+    org.apache.sshd: DEBUG
+    net.solarnetwork.solarsftp: TRACE
+
+ssh:
+  host: solarnetworkdev.net
+
+solarnet.baseUrl: http://solarnetworkdev.net:8680
+solarssh.logdir: .

@@ -1,7 +1,7 @@
 /* ==================================================================
- * DefaultSolarSshdService.java - Jun 11, 2017 3:42:49 PM
+ * DefaultSolarSftpServer.java - 11/08/2020 6:59:41 AM
  * 
- * Copyright 2017 SolarNetwork.net Dev Team
+ * Copyright 2020 SolarNetwork SolarNetwork.net Dev Team
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -20,8 +20,9 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
+import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
@@ -39,7 +40,6 @@ import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.common.session.helpers.AbstractSession;
 import org.apache.sshd.server.SshServer;
-import org.apache.sshd.server.auth.pubkey.CachingPublicKeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,19 +47,19 @@ import org.springframework.core.io.Resource;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
-import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.solarssh.service.SolarSshdService;
 
 /**
- * Service to manage the SSH server.
+ * Default SSH server service.
  * 
  * @author matt
  * @version 1.0
  */
-public class DefaultSolarSshdService implements SolarSshdService, SessionListener, ChannelListener {
+public class DefaultSolarSftpServer implements SessionListener, ChannelListener {
 
   /** The default port to listen on. */
-  public static final int DEFAULT_LISTEN_PORT = 8022;
+  public static final int DEFAULT_LISTEN_PORT = 9022;
+
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSftpServer.class);
 
   private final SshSessionDao sessionDao;
 
@@ -75,12 +75,10 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
    * @param sessionDao
    *        the session DAO to use
    */
-  public DefaultSolarSshdService(SshSessionDao sessionDao) {
+  public DefaultSolarSftpServer(SshSessionDao sessionDao) {
     super();
     this.sessionDao = sessionDao;
   }
-
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdService.class);
 
   /**
    * Start the server.
@@ -102,11 +100,8 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    //s.setKeyPairProvider(new MappedKeyPairProvider(Collections.singletonList(kp)));
 
-    // TODO: verify if CachingPublicKeyAuthenticator is appropriate
-    s.setPublickeyAuthenticator(
-        new CachingPublicKeyAuthenticator(new SolarSshPublicKeyAuthenticator(sessionDao)));
+    s.setPasswordAuthenticator(new SolarSshPasswordAuthenticator(sessionDao));
 
     s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
 
@@ -116,7 +111,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     try {
       s.start();
     } catch (IOException e) {
-      throw new RuntimeException("Communication error starting SSH server", e);
+      throw new RuntimeException("Communication error starting SSH server on port " + port, e);
     }
     LOG.info("SSH server listening on port {}", port);
     server = s;
@@ -138,8 +133,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     }
   }
 
-  @Override
-  public synchronized ServerSession serverSessionForSessionId(String sessionId) {
+  private synchronized ServerSession serverSessionForSessionId(String sessionId) {
     if (server == null || !server.isOpen()) {
       return null;
     }
@@ -159,14 +153,14 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         sess.setEstablished(true);
         sess.setServerSession(session);
 
-        Map<String, Object> auditProps = sess.auditEventMap("NODE-CONNECT");
+        Map<String, Object> auditProps = sess.auditEventMap("DIRECT-CONNECT");
         auditProps.put("date", System.currentTimeMillis());
         IoSession ioSession = session.getIoSession();
         if (ioSession != null) {
           auditProps.put("remoteAddress", ioSession.getRemoteAddress());
         }
         auditProps.put("rport", sess.getReverseSshPort());
-        SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
+        AUDIT_LOG.info(getJSONString(auditProps, "{}"));
       }
     }
   }
@@ -230,7 +224,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
   private void logSessionClosed(Session session, Throwable t) {
     String sessionId = session.getUsername();
     LOG.info("Session {} closed", sessionId);
-    Map<String, Object> auditProps = auditEventMap(session, "NODE-DISCONNECT");
+    Map<String, Object> auditProps = auditEventMap(session, "DIRECT-DISCONNECT");
     IoSession ioSession = session.getIoSession();
     if (ioSession != null) {
       auditProps.put("remoteAddress", ioSession.getRemoteAddress());
@@ -238,7 +232,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     if (t != null) {
       auditProps.put("error", t.toString());
     }
-    SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
+    AUDIT_LOG.info(getJSONString(auditProps, "{}"));
   }
 
   @Override

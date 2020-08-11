@@ -32,11 +32,12 @@ import org.springframework.core.io.Resource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import net.solarnetwork.solarssh.service.DefaultSolarNetClient;
-import net.solarnetwork.solarssh.service.DefaultSolarSshService;
+import net.solarnetwork.solarssh.impl.DefaultSolarNetClient;
+import net.solarnetwork.solarssh.impl.DefaultSolarSftpServer;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshService;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshdService;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
 
 /**
  * Main service configuration.
@@ -72,6 +73,9 @@ public class ServiceConfig {
 
   @Value("${solarnet.baseUrl:https://data.solarnetwork.net}")
   private String solarNetBaseUrl = "https://data.solarnetwork.net";
+
+  @Value("${ssh.direct.port:9022}")
+  private int sshDirectPort = 9022;
 
   /**
    * Initialize the {@link SolarSshService} service.
@@ -120,6 +124,20 @@ public class ServiceConfig {
   public DefaultSolarSshdService solarSshdService() {
     DefaultSolarSshdService service = new DefaultSolarSshdService(solarSshService());
     service.setPort(sshPort);
+    service.setServerKeyResource(sshKeyResource);
+    service.setServerKeyPassword(sshKeyPassword);
+    return service;
+  }
+
+  /**
+   * Initialize the SSHD server service.
+   * 
+   * @return the service.
+   */
+  @Bean(initMethod = "start", destroyMethod = "stop")
+  public DefaultSolarSftpServer solarSshdDirectService() {
+    DefaultSolarSftpServer service = new DefaultSolarSftpServer(solarSshService());
+    service.setPort(sshDirectPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
     return service;

@@ -20,7 +20,9 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.service;
+package net.solarnetwork.solarssh.impl;
+
+import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +57,8 @@ import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
+import net.solarnetwork.solarssh.service.SolarNetClient;
+import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.util.JsonUtils;
 
 /**
@@ -157,7 +161,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
             Map<String, Object> auditProps = sess.auditEventMap("NEW");
             auditProps.put("date", sess.getCreated());
             auditProps.put(REVERSE_PORT_PARAM, rport);
-            SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+            AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
             return sess;
           }
         } catch (SocketException e) {
@@ -213,7 +217,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     Map<String, Object> auditProps = sess.auditEventMap("ATTACH-TERM");
     auditProps.put("date", System.currentTimeMillis());
     auditProps.put("connectAddress", clientSession.getConnectAddress());
-    SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+    AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
 
     return sess;
   }
@@ -257,7 +261,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
         } finally {
           Map<String, Object> auditProps = sess.auditEventMap("DETACH-TERM");
           auditProps.put("date", System.currentTimeMillis());
-          SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+          AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
         }
       }
     });
@@ -315,7 +319,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       Map<String, Object> auditProps = sess.auditEventMap("END");
       auditProps.put("date", now);
       auditProps.put("duration", secs);
-      SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+      AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
       sess.setEstablished(false);
     }
   }

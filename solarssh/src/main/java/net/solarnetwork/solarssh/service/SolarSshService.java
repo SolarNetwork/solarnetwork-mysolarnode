@@ -26,9 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
@@ -41,9 +38,6 @@ import net.solarnetwork.solarssh.domain.SshTerminalSettings;
  * @version 1.0
  */
 public interface SolarSshService extends SshSessionDao {
-
-  /** A logger for audit events. */
-  Logger AUDIT_LOG = LoggerFactory.getLogger("SolarSshService.AUDIT");
 
   /**
    * Get a new session with an unused reverse SSH port.
