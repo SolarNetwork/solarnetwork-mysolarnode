@@ -7,7 +7,7 @@ plugins {
 }
 
 apply plugin: 'checkstyle'
-apply plugin: 'java'
+apply plugin: 'war'
 apply plugin: 'io.spring.dependency-management'
 
 description = 'SolarSSH Server'
@@ -64,6 +64,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+	// allow WAR to be run from command line OR deployed in Tomcat
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+
 	// JSON
 	implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
 	implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
@@ -71,7 +74,7 @@ dependencies {
 	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
 	
 	// DB
-	runtime "org.postgresql:postgresql:${postgresJdbcVersion}"
+	implementation "org.postgresql:postgresql:${postgresJdbcVersion}"
 
 	// Logging
 	implementation "org.slf4j:jul-to-slf4j:${slf4jVersion}"

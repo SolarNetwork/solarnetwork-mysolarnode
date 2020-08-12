@@ -23,12 +23,9 @@
 package net.solarnetwork.solarssh.web.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
@@ -39,10 +36,7 @@ import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
  * @author matt
  * @version 1.1
  */
-@EnableWebMvc
 @Configuration
-@ComponentScan(basePackages = { "net.solarnetwork.solarssh.web" })
-@EnableScheduling
 public class WebMvcConfig implements WebMvcConfigurer {
 
   @Autowired

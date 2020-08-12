@@ -24,6 +24,7 @@ package net.solarnetwork.solarssh;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import net.solarnetwork.solarssh.config.AppConfig;
 import net.solarnetwork.solarssh.web.config.WebConfig;
@@ -36,6 +37,7 @@ import net.solarnetwork.solarssh.web.config.WebConfig;
  */
 @SpringBootApplication(scanBasePackageClasses = { SolarSshApp.class, AppConfig.class,
     WebConfig.class })
+@EnableScheduling
 public class SolarSshApp {
 
   /**
