@@ -5,6 +5,27 @@
 
 solarnet.baseUrl: https://data.solarnetwork.net
 
+###############################################################################
+# solarnet.auth.timeoutSeconds <integer>
+# solarnet.auth.instructionCompletedWaitMs <integer>
+# solarnet.auth.instructionIncompleteWaitMs <integer>
+# 
+# The `timeoutSeconds` property is the overall maximum amount of time to wait
+# for the SolarNetwork direct SSH authentication process to complete, which
+# includes the time for the destination node to completely process the
+# issued `StartRemoteSsh` instruction.
+#
+# The `instructionCompletedWaitMs` is a "pause" time after the `StartRemoteSsh`
+# instruction status changes to `Completed`, to give some time for the node's
+# SSH connection to SolarSSH to actually get established, which can take
+# several seconds on slow network connections. The `instructionIncompleteWaitMs`
+# is a "pause" time between calls to check the status of the `StartRemoteSsh`
+# instruction, while it is still incomplete.
+
+solarnet.auth:
+  timeoutSeconds: 300
+  instructionCompletedWaitMs: 1000
+  instructionIncompleteWaitMs: 1000
 
 ssh:
   ###############################################################################
@@ -19,6 +40,15 @@ ssh:
   host: localhost
   port: 8022
 
+  ###############################################################################
+  # ssh.direct.port <integer>
+  # 
+  # The port number to listen on for direct SSH connections, which use username
+  # values in the form `nodeId:tokenId` to dynamically issue a `StartRemoteSsh`
+  # instruction for the given node and connect immediately. Works best for 
+  # nodes connected to SolarIn/MQTT for fast instruction handling.
+  
+  direct.port: 9022
 
   ###############################################################################
   # ssh.keyResource <resource string>

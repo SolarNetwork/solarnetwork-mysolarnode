@@ -62,12 +62,24 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
    */
   public static final int DEFAULT_MAX_NODE_INSTRUCTION_WAIT_SECS = 300;
 
+  /**
+   * The default value for the {@code instructionCompletedWaitMs} property.
+   */
+  public static final long DEFAULT_INSTRUCTION_COMPLETED_WAIT_MS = 1000L;
+
+  /**
+   * The default value for the {@code instructionIncompletedWaitMs} property.
+   */
+  public static final long DEFAULT_INSTRUCTION_INCOMPLETED_WAIT_MS = 1000L;
+
   private static final Logger log = LoggerFactory.getLogger(SolarSshPasswordAuthenticator.class);
 
   private final SolarSshService solarSshService;
   private final ActorDao actorDao;
   private String snHost = DEFAULT_SN_HOST;
   private int maxNodeInstructionWaitSecs = DEFAULT_MAX_NODE_INSTRUCTION_WAIT_SECS;
+  private long instructionCompletedWaitMs = DEFAULT_INSTRUCTION_COMPLETED_WAIT_MS;
+  private long instructionIncompleteWaitMs = DEFAULT_INSTRUCTION_INCOMPLETED_WAIT_MS;
 
   /**
    * Constructor.
@@ -98,6 +110,7 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
     SshSession sshSession = null;
     Actor actor = actorDao.getAuthenticatedActor(nodeId, tokenId, password);
     if (actor != null) {
+      // node + token checks out; create new node SSH session now
       Date now = new Date();
       AuthorizationV2Builder authBuilder = new AuthorizationV2Builder(tokenId)
           .saveSigningKey(password).date(now).host(snHost)
@@ -107,6 +120,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
       try {
         sshSession = solarSshService.createNewSession(nodeId, now.getTime(), authBuilder.build());
         sshSession.setDirectServerSession(session);
+        sshSession.setTokenSecret(password);
+        sshSession.setEstablished(true);
 
         instructionParams = SolarNetClient.createRemoteSshInstructionParams(sshSession);
         // CHECKSTYLE OFF: LineLength
@@ -123,8 +138,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
             .queryParams(instructionParams);
         sshSession = solarSshService.startSession(sshSession.getId(), now.getTime(),
             authBuilder.build());
-        return waitForNodeInstructionToComplete(tokenId, INSTRUCTION_TOPIC_START_REMOTE_SSH,
-            sshSession.getStartInstructionId(), authBuilder);
+        return waitForNodeInstructionToComplete(sshSession.getId(), tokenId,
+            INSTRUCTION_TOPIC_START_REMOTE_SSH, sshSession.getStartInstructionId(), authBuilder);
       } catch (IOException e) {
         log.info("Communication error creating new SshSession: {}", e.toString());
         // if we started the node remote SSH, stop it now
@@ -149,8 +164,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
     return false;
   }
 
-  private boolean waitForNodeInstructionToComplete(String tokenId, String topic, Long instructionId,
-      AuthorizationV2Builder authBuilder) throws IOException {
+  private boolean waitForNodeInstructionToComplete(String sessionId, String tokenId, String topic,
+      Long instructionId, AuthorizationV2Builder authBuilder) throws IOException {
     final long expire = System.currentTimeMillis() + (1000L * this.maxNodeInstructionWaitSecs);
     while (System.currentTimeMillis() < expire) {
       Date now = new Date();
@@ -160,19 +175,30 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
           now.getTime(), authBuilder.build());
       if (state == SolarNodeInstructionState.Completed) {
         log.info("Token {} {} instruction {} completed", tokenId, topic, instructionId);
-        // wait a few ticks for node SSH connection to actually be established
-        try {
-          Thread.sleep(1000L);
-        } catch (InterruptedException e) {
-          break;
+        while (System.currentTimeMillis() < expire) {
+          SshSession sess = solarSshService.findOne(sessionId);
+          if (sess == null) {
+            break;
+          }
+          if (sess.getServerSession() != null) {
+            // node has connected; good to go!
+            return true;
+          }
+          // wait a few ticks for node SSH connection to actually be established
+          try {
+            Thread.sleep(instructionCompletedWaitMs);
+          } catch (InterruptedException e) {
+            break;
+          }
         }
-        return true;
+        return false;
       } else if (state == SolarNodeInstructionState.Declined) {
+        log.info("Token {} {} instruction {} was declined.", tokenId, topic, instructionId);
         return false;
       }
       // wait a few ticks
       try {
-        Thread.sleep(1000L);
+        Thread.sleep(instructionIncompleteWaitMs);
       } catch (InterruptedException e) {
         break;
       }
@@ -212,6 +238,37 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
    */
   public void setMaxNodeInstructionWaitSecs(int maxNodeInstructionWaitSecs) {
     this.maxNodeInstructionWaitSecs = maxNodeInstructionWaitSecs;
+  }
+
+  /**
+   * Set the number of milliseconds to wait after a node instruction has completed before
+   * continuing.
+   * 
+   * <p>
+   * This is designed to give the node a bit of time to actually establish its SSH connection to the
+   * SolarSSH server after reporting that it has completed the {@literal StartRemoteSsh}
+   * instruction. It can take a few seconds for that to happen, especially on slow network
+   * connections.
+   * </p>
+   * 
+   * @param instructionCompletedWaitMs
+   *        the wait time, in milliseconds; defaults to
+   *        {@link #DEFAULT_INSTRUCTION_COMPLETED_WAIT_MS}
+   */
+  public void setInstructionCompletedWaitMs(long instructionCompletedWaitMs) {
+    this.instructionCompletedWaitMs = instructionCompletedWaitMs;
+  }
+
+  /**
+   * Set the number of milliseconds to wait after checking for a node instruction to complete when
+   * discovered the instruction is not complete yet, before checking the instruction status again.
+   * 
+   * @param instructionIncompleteWaitMs
+   *        the wait time, in milliseconds; defaults to
+   *        {@link #DEFAULT_INSTRUCTION_INCOMPLETED_WAIT_MS}
+   */
+  public void setInstructionIncompleteWaitMs(long instructionIncompleteWaitMs) {
+    this.instructionIncompleteWaitMs = instructionIncompleteWaitMs;
   }
 
 }

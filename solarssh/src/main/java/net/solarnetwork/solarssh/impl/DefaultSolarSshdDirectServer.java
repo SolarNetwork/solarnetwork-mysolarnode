@@ -25,34 +25,28 @@ package net.solarnetwork.solarssh.impl;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
-import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
+import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_STOP_REMOTE_SSH;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.Date;
 import java.util.Map;
 
-import org.apache.sshd.common.FactoryManager;
-import org.apache.sshd.common.channel.Channel;
-import org.apache.sshd.common.channel.ChannelListener;
-import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.io.IoSession;
-import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
-import org.apache.sshd.common.session.helpers.AbstractSession;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.channel.ChannelSessionFactory;
-import org.apache.sshd.server.session.ServerSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 
 import net.solarnetwork.solarssh.dao.ActorDao;
+import net.solarnetwork.solarssh.domain.DirectSshUsername;
 import net.solarnetwork.solarssh.domain.SshSession;
+import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
+import net.solarnetwork.web.security.AuthorizationV2Builder;
 
 /**
  * Default SSH server service.
@@ -60,26 +54,18 @@ import net.solarnetwork.solarssh.service.SolarSshService;
  * @author matt
  * @version 1.0
  */
-public class DefaultSolarSshdDirectServer implements SessionListener, ChannelListener {
+public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
 
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 9022;
 
-  /**
-   * The default value for the {@code authTimeoutSecs} property.
-   */
-  public static final int DEFAULT_AUTH_TIMEOUT_SECS = 300;
-
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdDirectServer.class);
-
   private final SolarSshService solarSshService;
   private final ActorDao actorDao;
 
-  private String snHost = DEFAULT_SN_HOST;
-  private int port = DEFAULT_LISTEN_PORT;
-  private int authTimeoutSecs = DEFAULT_AUTH_TIMEOUT_SECS;
-  private Resource serverKeyResource;
-  private String serverKeyPassword;
+  // CHECKSTYLE OFF: LineLength
+  private long instructionCompletedWaitMs = SolarSshPasswordAuthenticator.DEFAULT_INSTRUCTION_COMPLETED_WAIT_MS;
+  private long instructionIncompleteWaitMs = SolarSshPasswordAuthenticator.DEFAULT_INSTRUCTION_INCOMPLETED_WAIT_MS;
+  // CHECKSTYLE OFF: LineLength
 
   private SshServer server;
 
@@ -92,9 +78,10 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
    *        the actor DAO to use
    */
   public DefaultSolarSshdDirectServer(SolarSshService solarSshService, ActorDao actorDao) {
-    super();
+    super(solarSshService);
     this.solarSshService = solarSshService;
     this.actorDao = actorDao;
+    setPort(DEFAULT_LISTEN_PORT);
   }
 
   /**
@@ -105,40 +92,25 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
     if (s != null) {
       return;
     }
-    s = SshServer.setUpDefaultServer();
-    s.setPort(port);
+    s = createServer();
 
     s.setChannelFactories(unmodifiableList(
-        asList(ChannelSessionFactory.INSTANCE, new DynamicDirectTcpipFactory(solarSshService))));
-
-    try {
-      FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
-          serverKeyResource.getFile().toPath());
-      keyPairProvider.setPasswordFinder(FilePasswordProvider.of(serverKeyPassword));
-      s.setKeyPairProvider(keyPairProvider);
-      LOG.info("Using SSH server key from {}", serverKeyResource);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+        asList(ChannelSessionFactory.INSTANCE, new DynamicDirectTcpipFactory(sessionDao))));
 
     SolarSshPasswordAuthenticator pwAuth = new SolarSshPasswordAuthenticator(solarSshService,
         actorDao);
-    pwAuth.setSnHost(snHost);
+    pwAuth.setSnHost(getSnHost());
+    pwAuth.setInstructionCompletedWaitMs(instructionCompletedWaitMs);
+    pwAuth.setInstructionIncompleteWaitMs(instructionIncompleteWaitMs);
+    pwAuth.setMaxNodeInstructionWaitSecs(getAuthTimeoutSecs());
     s.setPasswordAuthenticator(pwAuth);
-
-    s.setForwardingFilter(new SshSessionForwardFilter(solarSshService));
-
-    s.addSessionListener(this);
-    s.addChannelListener(this);
-
-    s.getProperties().put(FactoryManager.AUTH_TIMEOUT, authTimeoutSecs * 1000L);
 
     try {
       s.start();
     } catch (IOException e) {
-      throw new RuntimeException("Communication error starting SSH server on port " + port, e);
+      throw new RuntimeException("Communication error starting SSH server on port " + getPort(), e);
     }
-    LOG.info("SSH server listening on port {}", port);
+    log.info("SSH server listening on port {}", getPort());
     server = s;
   }
 
@@ -153,30 +125,20 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
         s.removeChannelListener(this);
         s.stop();
       } catch (IOException e) {
-        LOG.warn("Communication error stopping SSH server: {}", e.getMessage());
+        log.warn("Communication error stopping SSH server: {}", e.getMessage());
       }
     }
-  }
-
-  private synchronized ServerSession serverSessionForSessionId(String sessionId) {
-    if (server == null || !server.isOpen()) {
-      return null;
-    }
-    List<AbstractSession> sessions = server.getActiveSessions();
-    LOG.debug("{} active sessions: {}", sessions != null ? sessions.size() : 0, sessions);
-    AbstractSession session = sessions.stream().filter(s -> sessionId.equals(s.getUsername()))
-        .findFirst().orElse(null);
-    return (ServerSession) session;
   }
 
   @Override
   public void sessionEvent(Session session, Event event) {
     if (event == SessionListener.Event.Authenticated) {
-      String sessionId = session.getUsername();
-      SshSession sess = solarSshService.findOne(sessionId);
+      SshSession sess = sessionDao.findOne(session);
       if (sess != null) {
-        sess.setEstablished(true);
-        sess.setServerSession(session);
+        if (!sess.isEstablished()) {
+          sess.setEstablished(true);
+          sess.setDirectServerSession(session);
+        }
 
         Map<String, Object> auditProps = sess.auditEventMap("DIRECT-CONNECT");
         auditProps.put("date", System.currentTimeMillis());
@@ -192,16 +154,16 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
 
   @Override
   public void sessionException(Session session, Throwable t) {
-    LOG.warn("Session {} exception", session.getUsername(), t);
+    log.warn("Session {} exception", session.getUsername(), t);
     logSessionClosed(session, t);
   }
 
   @Override
   public void sessionClosed(Session session) {
-    String sessionId = session.getUsername();
-    if (sessionId != null) {
+    String username = session.getUsername();
+    if (username != null) {
       logSessionClosed(session, null);
-      SshSession sess = solarSshService.findOne(sessionId);
+      SshSession sess = sessionDao.findOne(session);
       if (sess != null) {
         // check if matching remote address
         SocketAddress closedSessionRemoteAddress = null;
@@ -210,7 +172,7 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
         if (ioSession != null) {
           closedSessionRemoteAddress = ioSession.getRemoteAddress();
         }
-        Session daoServerSession = sess.getServerSession();
+        Session daoServerSession = sess.getDirectServerSession();
         if (daoServerSession != null) {
           IoSession daoIoSession = daoServerSession.getIoSession();
           if (daoIoSession != null) {
@@ -219,121 +181,77 @@ public class DefaultSolarSshdDirectServer implements SessionListener, ChannelLis
         }
         if (closedSessionRemoteAddress == null || daoSessionRemoteAddress == null
             || closedSessionRemoteAddress.equals(daoSessionRemoteAddress)) {
-          solarSshService.delete(sess);
+          try {
+            stopRemoteSsh(username, sess);
+          } finally {
+            sessionDao.delete(sess);
+          }
         }
       }
     }
   }
 
-  private Map<String, Object> auditEventMap(Session session, String eventName) {
-    String sessionId = session.getUsername();
-    SshSession sess = solarSshService.findOne(sessionId);
-    Map<String, Object> map;
-    if (sess != null) {
-      map = sess.auditEventMap(eventName);
-    } else {
-      map = new LinkedHashMap<>(8);
-      map.put("sessionId", sessionId);
-      map.put("event", eventName);
+  private void stopRemoteSsh(String username, SshSession sshSession) {
+    if (username == null || sshSession == null || sshSession.getTokenSecret() == null) {
+      return;
     }
-    long now = System.currentTimeMillis();
-    map.put("date", now);
-    if (sess != null) {
-      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
-      map.put("duration", secs);
+    DirectSshUsername directUsername;
+    try {
+      directUsername = DirectSshUsername.valueOf(username);
+    } catch (IllegalArgumentException e) {
+      return;
     }
-    return map;
+    Map<String, String> instructionParams = SolarNetClient
+        .createRemoteSshInstructionParams(sshSession);
+    instructionParams.put("nodeId", directUsername.getNodeId().toString());
+    instructionParams.put("topic", INSTRUCTION_TOPIC_STOP_REMOTE_SSH);
 
-  }
+    Date now = new Date();
+    AuthorizationV2Builder authBuilder = new AuthorizationV2Builder(directUsername.getTokenId())
+        .saveSigningKey(sshSession.getTokenSecret()).date(now).host(getSnHost())
+        .method(HttpMethod.POST).path("/solaruser/api/v1/sec/instr/add")
+        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE).queryParams(instructionParams);
 
-  private void logSessionClosed(Session session, Throwable t) {
-    String sessionId = session.getUsername();
-    LOG.info("Session {} closed", sessionId);
-    Map<String, Object> auditProps = auditEventMap(session, "DIRECT-DISCONNECT");
-    IoSession ioSession = session.getIoSession();
-    if (ioSession != null) {
-      auditProps.put("remoteAddress", ioSession.getRemoteAddress());
+    try {
+      sshSession = solarSshService.stopSession(sshSession.getId(), now.getTime(),
+          authBuilder.build());
+      log.info("Issued {} instruction for token {} node {} with parameters {}",
+          INSTRUCTION_TOPIC_STOP_REMOTE_SSH, directUsername.getTokenId(),
+          directUsername.getNodeId(), instructionParams);
+    } catch (IOException e) {
+      log.warn("Communication error issuing StopRemoteSsh instruction: {}", e.toString());
     }
-    if (t != null) {
-      auditProps.put("error", t.toString());
-    }
-    AUDIT_LOG.info(getJSONString(auditProps, "{}"));
-  }
-
-  @Override
-  public void channelOpenSuccess(Channel channel) {
-    LOG.debug("Channel {} open success", channel);
-  }
-
-  @Override
-  public void channelOpenFailure(Channel channel, Throwable reason) {
-    LOG.debug("Channel {} open failure", channel, reason);
-  }
-
-  @Override
-  public void channelClosed(Channel channel, Throwable reason) {
-    LOG.debug("Channel {} from session {} closed", channel, channel.getSession().getUsername(),
-        reason);
   }
 
   /**
-   * Set the port to listen for SSH connections on.
-   * 
-   * @param port
-   *        the port to listen on
-   */
-  public void setPort(int port) {
-    this.port = port;
-  }
-
-  /**
-   * Set the resource that holds the server key to use.
-   * 
-   * @param serverKeyResource
-   *        the server key resource
-   */
-  public void setServerKeyResource(Resource serverKeyResource) {
-    this.serverKeyResource = serverKeyResource;
-  }
-
-  /**
-   * Set the password for the server key resource.
-   * 
-   * @param serverKeyPassword
-   *        the server key password, or {@literal null} for no password
-   */
-  public void setServerKeyPassword(String serverKeyPassword) {
-    this.serverKeyPassword = serverKeyPassword;
-  }
-
-  /**
-   * Set the SolarNetwork host to use.
-   * 
-   * @param snHost
-   *        the host
-   * @throws IllegalArgumentException
-   *         if {@code snHost} is {@literal null}
-   */
-  public void setSnHost(String snHost) {
-    if (snHost == null) {
-      throw new IllegalArgumentException("snHost must not be null");
-    }
-    this.snHost = snHost;
-  }
-
-  /**
-   * Set the authorization timeout value, in seconds.
+   * Set the number of milliseconds to wait after a node instruction has completed before
+   * continuing.
    * 
    * <p>
-   * This must be large enough to allow for SolarNode devices to handle the
-   * {@literal StartRemoteSsh} instruction.
+   * This is designed to give the node a bit of time to actually establish its SSH connection to the
+   * SolarSSH server after reporting that it has completed the {@literal StartRemoteSsh}
+   * instruction. It can take a few seconds for that to happen, especially on slow network
+   * connections.
    * </p>
    * 
-   * @param authTimeoutSecs
-   *        the timeout seconds
+   * @param instructionCompletedWaitMs
+   *        the wait time, in milliseconds; defaults to
+   *        {@link #DEFAULT_INSTRUCTION_COMPLETED_WAIT_MS}
    */
-  public void setAuthTimeoutSecs(int authTimeoutSecs) {
-    this.authTimeoutSecs = authTimeoutSecs;
+  public void setInstructionCompletedWaitMs(long instructionCompletedWaitMs) {
+    this.instructionCompletedWaitMs = instructionCompletedWaitMs;
+  }
+
+  /**
+   * Set the number of milliseconds to wait after checking for a node instruction to complete when
+   * discovered the instruction is not complete yet, before checking the instruction status again.
+   * 
+   * @param instructionIncompleteWaitMs
+   *        the wait time, in milliseconds; defaults to
+   *        {@link #DEFAULT_INSTRUCTION_INCOMPLETED_WAIT_MS}
+   */
+  public void setInstructionIncompleteWaitMs(long instructionIncompleteWaitMs) {
+    this.instructionIncompleteWaitMs = instructionIncompleteWaitMs;
   }
 
 }

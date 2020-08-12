@@ -23,7 +23,7 @@
 package net.solarnetwork.solarssh.service;
 
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -162,7 +162,7 @@ public interface SolarNetClient {
    * @return the parameters
    */
   public static Map<String, String> createRemoteSshInstructionParams(SshSession sess) {
-    Map<String, String> instructionParams = new HashMap<>(4);
+    Map<String, String> instructionParams = new LinkedHashMap<>(6);
     addInstructionParam(instructionParams, HOST_PARAM, sess.getSshHost());
     addInstructionParam(instructionParams, USER_PARAM, sess.getId());
     addInstructionParam(instructionParams, PORT_PARAM, sess.getSshPort());

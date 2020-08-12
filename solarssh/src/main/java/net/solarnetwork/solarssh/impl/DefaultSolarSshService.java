@@ -23,6 +23,9 @@
 package net.solarnetwork.solarssh.impl;
 
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
+import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_START_REMOTE_SSH;
+import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_STOP_REMOTE_SSH;
+import static net.solarnetwork.solarssh.service.SolarNetClient.REVERSE_PORT_PARAM;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,11 +73,6 @@ import net.solarnetwork.util.JsonUtils;
 public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
   private static final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
-
-  private static final String REVERSE_PORT_PARAM = "rport";
-  private static final String PORT_PARAM = "port";
-  private static final String USER_PARAM = "user";
-  private static final String HOST_PARAM = "host";
 
   private String host = "ssh.solarnetwork.net";
   private int port = 8022;
@@ -202,8 +200,8 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
     Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
-    Long instructionId = solarNetClient.queueInstruction("StartRemoteSsh", sess.getNodeId(),
-        instructionParams, authorizationDate, authorization);
+    Long instructionId = solarNetClient.queueInstruction(INSTRUCTION_TOPIC_START_REMOTE_SSH,
+        sess.getNodeId(), instructionParams, authorizationDate, authorization);
 
     if (instructionId == null) {
       throw new AuthorizationException(
@@ -303,8 +301,8 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
     Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
-    Long instructionId = solarNetClient.queueInstruction("StopRemoteSsh", sess.getNodeId(),
-        instructionParams, authorizationDate, authorization);
+    Long instructionId = solarNetClient.queueInstruction(INSTRUCTION_TOPIC_STOP_REMOTE_SSH,
+        sess.getNodeId(), instructionParams, authorizationDate, authorization);
 
     if (instructionId == null) {
       throw new AuthorizationException(

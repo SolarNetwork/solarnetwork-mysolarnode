@@ -28,8 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.core.JdbcOperations;
@@ -51,7 +49,6 @@ import net.solarnetwork.solarssh.service.SolarSshService;
  * @version 1.0
  */
 @Configuration
-@PropertySource(value = "classpath:application-test.properties", ignoreResourceNotFound = true)
 @EnableScheduling
 public class ServiceConfig {
 
@@ -75,6 +72,15 @@ public class ServiceConfig {
 
   @Value("${ssh.sessionExpireSeconds:300}")
   private int sessionExpireSeconds = 300;
+
+  @Value("${solarnet.auth.timeoutSeconds:300}")
+  private int authTimeoutSecs;
+
+  @Value("${solarnet.auth.instructionCompletedWaitMs:1000}")
+  private long instructionCompletedWaitMs = 1000L;
+
+  @Value("${solarnet.auth.instructionIncompleteWaitMs:1000}")
+  private long instructionIncompleteWaitMs = 1000L;
 
   @Value("${solarnet.baseUrl:https://data.solarnetwork.net}")
   private String solarNetBaseUrl = "https://data.solarnetwork.net";
@@ -104,11 +110,6 @@ public class ServiceConfig {
   @Scheduled(fixedDelayString = "${ssh.sessionExpireCleanupJobMs:60000}")
   public void cleanupExpiredSessions() {
     solarSshService().cleanupExpiredSessions();
-  }
-
-  @Bean
-  public static PropertySourcesPlaceholderConfigurer placeHolderConfigurer() {
-    return new PropertySourcesPlaceholderConfigurer();
   }
 
   /**
@@ -150,6 +151,9 @@ public class ServiceConfig {
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
     service.setSnHost(snHost());
+    service.setAuthTimeoutSecs(authTimeoutSecs);
+    service.setInstructionCompletedWaitMs(instructionCompletedWaitMs);
+    service.setInstructionIncompleteWaitMs(instructionIncompleteWaitMs);
     return service;
   }
 
