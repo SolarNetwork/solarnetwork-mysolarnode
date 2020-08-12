@@ -59,6 +59,9 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
    */
   public static final int DEFAULT_AUTH_TIMEOUT_SECS = 300;
 
+  /** A server property key for the listening port. */
+  public static final String PORT_KEY = "solarssh.port";
+
   protected final SshSessionDao sessionDao;
 
   private String snHost = DEFAULT_SN_HOST;
@@ -81,9 +84,15 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
     this.sessionDao = sessionDao;
   }
 
+  /**
+   * Create a default SolarSSH server with common configuration applied.
+   * 
+   * @return the new server instance
+   */
   protected SshServer createServer() {
     SshServer s = SshServer.setUpDefaultServer();
     s.setPort(port);
+    s.getProperties().put(PORT_KEY, port);
 
     try {
       FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
@@ -104,6 +113,15 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
     return s;
   }
 
+  /**
+   * Create an audit event map.
+   * 
+   * @param session
+   *        the session
+   * @param eventName
+   *        the event name
+   * @return the map
+   */
   protected Map<String, Object> auditEventMap(Session session, String eventName) {
     SshSession sess = sessionDao.findOne(session);
     String sessionId = (sess != null ? sess.getId() : session.getUsername());
@@ -124,11 +142,21 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
     return map;
   }
 
-  protected void logSessionClosed(Session session, Throwable t) {
+  /**
+   * Log a session closed event.
+   * 
+   * @param session
+   *        the session
+   * @param auditEventName
+   *        the audit event name
+   * @param t
+   *        an optional exception
+   */
+  protected void logSessionClosed(Session session, String auditEventName, Throwable t) {
     SshSession sess = sessionDao.findOne(session);
     String sessionId = (sess != null ? sess.getId() : session.getUsername());
     log.info("Session {} closed", sessionId);
-    Map<String, Object> auditProps = auditEventMap(session, "DIRECT-DISCONNECT");
+    Map<String, Object> auditProps = auditEventMap(session, auditEventName);
     IoSession ioSession = session.getIoSession();
     if (ioSession != null) {
       auditProps.put("remoteAddress", ioSession.getRemoteAddress());

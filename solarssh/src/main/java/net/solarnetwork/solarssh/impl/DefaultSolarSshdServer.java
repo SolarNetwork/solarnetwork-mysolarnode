@@ -50,6 +50,10 @@ import net.solarnetwork.solarssh.service.SolarSshdService;
  */
 public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarSshdService {
 
+  private static final String AUDIT_NODE_CONNECT = "NODE-CONNECT";
+
+  private static final String AUDIT_NODE_DISCONNECT = "NODE-DISCONNECT";
+
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 8022;
 
@@ -126,7 +130,7 @@ public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarS
         sess.setEstablished(true);
         sess.setServerSession(session);
 
-        Map<String, Object> auditProps = sess.auditEventMap("NODE-CONNECT");
+        Map<String, Object> auditProps = sess.auditEventMap(AUDIT_NODE_CONNECT);
         auditProps.put("date", System.currentTimeMillis());
         IoSession ioSession = session.getIoSession();
         if (ioSession != null) {
@@ -141,14 +145,14 @@ public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarS
   @Override
   public void sessionException(Session session, Throwable t) {
     log.warn("Session {} exception", session.getUsername(), t);
-    logSessionClosed(session, t);
+    logSessionClosed(session, AUDIT_NODE_DISCONNECT, t);
   }
 
   @Override
   public void sessionClosed(Session session) {
     String sessionId = session.getUsername();
     if (sessionId != null) {
-      logSessionClosed(session, null);
+      logSessionClosed(session, AUDIT_NODE_DISCONNECT, null);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         // check if matching remote address

@@ -254,7 +254,7 @@ public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<S
       resultMsg.put("success", true);
       resultMsg.put("message", "Ready to attach");
 
-      websocketSession.getBasicRemote().sendText(JsonUtils.getJSONString(resultMsg,
+      websocketSession.getAsyncRemote().sendText(JsonUtils.getJSONString(resultMsg,
           "{\"success\":false,\"message\":\"Error serializing JSON response\"}"));
     } catch (AuthorizationException e) {
       closeReason = new CloseReason(SolarSshCloseCodes.AUTHENTICATION_FAILURE, e.getMessage());

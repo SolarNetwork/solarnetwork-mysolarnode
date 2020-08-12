@@ -56,6 +56,10 @@ import net.solarnetwork.web.security.AuthorizationV2Builder;
  */
 public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
 
+  private static final String AUDIT_DIRECT_CONNECT = "DIRECT-CONNECT";
+
+  private static final String AUDIT_DIRECT_DISCONNECT = "DIRECT-DISCONNECT";
+
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 9022;
 
@@ -140,7 +144,7 @@ public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
           sess.setDirectServerSession(session);
         }
 
-        Map<String, Object> auditProps = sess.auditEventMap("DIRECT-CONNECT");
+        Map<String, Object> auditProps = sess.auditEventMap(AUDIT_DIRECT_CONNECT);
         auditProps.put("date", System.currentTimeMillis());
         IoSession ioSession = session.getIoSession();
         if (ioSession != null) {
@@ -155,14 +159,14 @@ public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
   @Override
   public void sessionException(Session session, Throwable t) {
     log.warn("Session {} exception", session.getUsername(), t);
-    logSessionClosed(session, t);
+    logSessionClosed(session, AUDIT_DIRECT_DISCONNECT, t);
   }
 
   @Override
   public void sessionClosed(Session session) {
     String username = session.getUsername();
     if (username != null) {
-      logSessionClosed(session, null);
+      logSessionClosed(session, AUDIT_DIRECT_DISCONNECT, null);
       SshSession sess = sessionDao.findOne(session);
       if (sess != null) {
         // check if matching remote address
