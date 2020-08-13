@@ -55,6 +55,8 @@ public class SshSession {
   private Long stopInstructionId;
   private ClientSession clientSession;
   private Session serverSession;
+  private Session directServerSession;
+  private String tokenSecret;
 
   /**
    * Constructor.
@@ -167,6 +169,26 @@ public class SshSession {
   @JsonIgnore
   public void setServerSession(Session serverSession) {
     this.serverSession = serverSession;
+  }
+
+  @JsonIgnore
+  public Session getDirectServerSession() {
+    return directServerSession;
+  }
+
+  @JsonIgnore
+  public void setDirectServerSession(Session serverSession) {
+    this.directServerSession = serverSession;
+  }
+
+  @JsonIgnore
+  public String getTokenSecret() {
+    return tokenSecret;
+  }
+
+  @JsonIgnore
+  public void setTokenSecret(String tokenSecret) {
+    this.tokenSecret = tokenSecret;
   }
 
   /**

@@ -1,7 +1,7 @@
 /* ==================================================================
- * WebApplicationInitializer.java - 17/06/2017 8:29:13 AM
+ * SolarSshApp.java - 11/08/2020 11:42:01 AM
  * 
- * Copyright 2017 SolarNetwork.net Dev Team
+ * Copyright 2020 SolarNetwork.net Dev Team
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -20,34 +20,34 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.web.config;
+package net.solarnetwork.solarssh;
 
-import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
-import net.solarnetwork.solarssh.config.ServiceConfig;
+import net.solarnetwork.solarssh.config.AppConfig;
+import net.solarnetwork.solarssh.web.config.WebConfig;
 
 /**
- * Web application initializer.
+ * Main entry point for the SolarSSH server.
  * 
  * @author matt
  * @version 1.0
  */
-public class WebApplicationInitializer
-    extends AbstractAnnotationConfigDispatcherServletInitializer {
+@SpringBootApplication(scanBasePackageClasses = { SolarSshApp.class, AppConfig.class,
+    WebConfig.class })
+@EnableScheduling
+public class SolarSshApp {
 
-  @Override
-  protected Class<?>[] getRootConfigClasses() {
-    return new Class<?>[] { ServiceConfig.class };
-  }
-
-  @Override
-  protected Class<?>[] getServletConfigClasses() {
-    return new Class<?>[] { WebMvcConfig.class };
-  }
-
-  @Override
-  protected String[] getServletMappings() {
-    return new String[] { "/" };
+  /**
+   * Command-line entry point to launching server.
+   * 
+   * @param args
+   *        command line arguments
+   */
+  public static void main(String[] args) {
+    SpringApplication.run(SolarSshApp.class, args);
   }
 
 }

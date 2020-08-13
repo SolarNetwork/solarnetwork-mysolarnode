@@ -22,21 +22,25 @@
 
 package net.solarnetwork.solarssh.config;
 
+import java.net.URI;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
-import net.solarnetwork.solarssh.service.DefaultSolarNetClient;
-import net.solarnetwork.solarssh.service.DefaultSolarSshService;
+import net.solarnetwork.solarssh.impl.DefaultSolarNetClient;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshService;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshdDirectServer;
+import net.solarnetwork.solarssh.impl.DefaultSolarSshdServer;
+import net.solarnetwork.solarssh.impl.JdbcActorDao;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
 
 /**
  * Main service configuration.
@@ -45,34 +49,47 @@ import net.solarnetwork.solarssh.sshd.DefaultSolarSshdService;
  * @version 1.0
  */
 @Configuration
-@PropertySource("classpath:application.properties")
-@PropertySource(value = "classpath:application-test.properties", ignoreResourceNotFound = true)
 @EnableScheduling
 public class ServiceConfig {
 
-  @Value("${ssh.host}")
-  private String sshHost = "ssh.host:ssh.solarnetwork.net";
+  @Value("${ssh.host:ssh.solarnetwork.net}")
+  private String sshHost = "ssh.solarnetwork.net";
 
-  @Value("${ssh.port}")
+  @Value("${ssh.port:8022}")
   private int sshPort = 8022;
 
-  @Value("${ssh.keyResource}")
+  @Value("${ssh.keyResource:classpath:sshd-server-key}")
   private Resource sshKeyResource = new ClassPathResource("/sshd-server-key");
 
-  @Value("${ssh.keyPassword}")
+  @Value("${ssh.keyPassword:changeit}")
   private String sshKeyPassword = null;
 
-  @Value("${ssh.reversePort.min}")
+  @Value("${ssh.reversePort.min:50000}")
   private int sshReversePortMin = 50000;
 
-  @Value("${ssh.reversePort.max}")
+  @Value("${ssh.reversePort.max:65000}")
   private int sshReversePortMax = 65000;
 
-  @Value("${ssh.sessionExpireSeconds}")
+  @Value("${ssh.sessionExpireSeconds:300}")
   private int sessionExpireSeconds = 300;
 
-  @Value("${solarnet.baseUrl}")
+  @Value("${solarnet.auth.timeoutSeconds:300}")
+  private int authTimeoutSecs;
+
+  @Value("${solarnet.auth.instructionCompletedWaitMs:1000}")
+  private long instructionCompletedWaitMs = 1000L;
+
+  @Value("${solarnet.auth.instructionIncompleteWaitMs:1000}")
+  private long instructionIncompleteWaitMs = 1000L;
+
+  @Value("${solarnet.baseUrl:https://data.solarnetwork.net}")
   private String solarNetBaseUrl = "https://data.solarnetwork.net";
+
+  @Value("${ssh.direct.port:9022}")
+  private int sshDirectPort = 9022;
+
+  @Autowired
+  private JdbcOperations jdbcOps;
 
   /**
    * Initialize the {@link SolarSshService} service.
@@ -90,14 +107,9 @@ public class ServiceConfig {
     return service;
   }
 
-  @Scheduled(fixedDelayString = "${ssh.sessionExpireCleanupJobMs}")
+  @Scheduled(fixedDelayString = "${ssh.sessionExpireCleanupJobMs:60000}")
   public void cleanupExpiredSessions() {
     solarSshService().cleanupExpiredSessions();
-  }
-
-  @Bean
-  public static PropertySourcesPlaceholderConfigurer placeHolderConfigurer() {
-    return new PropertySourcesPlaceholderConfigurer();
   }
 
   /**
@@ -118,12 +130,51 @@ public class ServiceConfig {
    * @return the service.
    */
   @Bean(initMethod = "start", destroyMethod = "stop")
-  public DefaultSolarSshdService solarSshdService() {
-    DefaultSolarSshdService service = new DefaultSolarSshdService(solarSshService());
+  public DefaultSolarSshdServer solarSshdService() {
+    DefaultSolarSshdServer service = new DefaultSolarSshdServer(solarSshService());
     service.setPort(sshPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
     return service;
+  }
+
+  /**
+   * Initialize the SSHD server service.
+   * 
+   * @return the service.
+   */
+  @Bean(initMethod = "start", destroyMethod = "stop")
+  public DefaultSolarSshdDirectServer solarSshdDirectService() {
+    DefaultSolarSshdDirectServer service = new DefaultSolarSshdDirectServer(solarSshService(),
+        actorDao());
+    service.setPort(sshDirectPort);
+    service.setServerKeyResource(sshKeyResource);
+    service.setServerKeyPassword(sshKeyPassword);
+    service.setSnHost(snHost());
+    service.setAuthTimeoutSecs(authTimeoutSecs);
+    service.setInstructionCompletedWaitMs(instructionCompletedWaitMs);
+    service.setInstructionIncompleteWaitMs(instructionIncompleteWaitMs);
+    return service;
+  }
+
+  private String snHost() {
+    URI uri = URI.create(solarNetBaseUrl);
+    String snHost = uri.getHost();
+    if (uri.getPort() > 0) {
+      snHost += ":" + uri.getPort();
+    }
+    return snHost;
+  }
+
+  /**
+   * Get the actor DAO.
+   * 
+   * @return the actor DAO
+   */
+  @Bean
+  public JdbcActorDao actorDao() {
+    JdbcActorDao dao = new JdbcActorDao(jdbcOps);
+    return dao;
   }
 
 }

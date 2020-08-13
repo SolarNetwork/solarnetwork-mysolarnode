@@ -1,7 +1,7 @@
 /* ==================================================================
- * SolarNodeInstructionState.java - 17/06/2017 9:38:04 PM
+ * WebConfig.java - 11/08/2020 11:43:54 AM
  * 
- * Copyright 2017 SolarNetwork.net Dev Team
+ * Copyright 2020 SolarNetwork.net Dev Team
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -20,49 +20,14 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.domain;
+package net.solarnetwork.solarssh.web.config;
 
 /**
- * Instruction state enumeration.
+ * Marker interface for web configuration package.
  * 
  * @author matt
  * @version 1.0
  */
-public enum SolarNodeInstructionState {
-
-  /**
-   * The instruction state is not known.
-   */
-  Unknown,
-
-  /**
-   * The instruction is being queued.
-   */
-  Queuing,
-
-  /**
-   * The instruction has been queued, but not acknowledged yet.
-   */
-  Queued,
-
-  /**
-   * The instruction has been acknowledged, but has not been looked at yet.
-   */
-  Received,
-
-  /**
-   * The instruction has been acknowledged and is being executed currently.
-   */
-  Executing,
-
-  /**
-   * The instruction was acknowledged but has been declined and will not be executed.
-   */
-  Declined,
-
-  /**
-   * The instruction was acknowledged and has been executed.
-   */
-  Completed;
-
+public interface WebConfig {
+  // marker interface
 }

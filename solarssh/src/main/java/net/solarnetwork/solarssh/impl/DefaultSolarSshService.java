@@ -20,14 +20,18 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.service;
+package net.solarnetwork.solarssh.impl;
+
+import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
+import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_START_REMOTE_SSH;
+import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_STOP_REMOTE_SSH;
+import static net.solarnetwork.solarssh.service.SolarNetClient.REVERSE_PORT_PARAM;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.SocketException;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -52,9 +56,12 @@ import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
+import net.solarnetwork.solarssh.domain.SolarNodeInstructionState;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
+import net.solarnetwork.solarssh.service.SolarNetClient;
+import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.util.JsonUtils;
 
 /**
@@ -66,11 +73,6 @@ import net.solarnetwork.util.JsonUtils;
 public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 
   private static final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
-
-  private static final String REVERSE_PORT_PARAM = "rport";
-  private static final String PORT_PARAM = "port";
-  private static final String USER_PARAM = "user";
-  private static final String HOST_PARAM = "host";
 
   private String host = "ssh.solarnetwork.net";
   private int port = 8022;
@@ -107,6 +109,17 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new IllegalArgumentException("Null value not allowed.");
     }
     return sessionMap.get(id);
+  }
+
+  @Override
+  public SshSession findOne(final Session session) {
+    if (session == null) {
+      throw new IllegalArgumentException("Null value not allowed.");
+    }
+    return sessionMap.values().stream().filter(e -> {
+      return e.getServerSession() == session || e.getDirectServerSession() == session
+          || e.getClientSession() == session;
+    }).findAny().orElse(null);
   }
 
   @Override
@@ -157,7 +170,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
             Map<String, Object> auditProps = sess.auditEventMap("NEW");
             auditProps.put("date", sess.getCreated());
             auditProps.put(REVERSE_PORT_PARAM, rport);
-            SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+            AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
             return sess;
           }
         } catch (SocketException e) {
@@ -171,6 +184,13 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   }
 
   @Override
+  public SolarNodeInstructionState getInstructionState(Long id, long authorizationDate,
+      String authorization) throws IOException {
+    SolarNetInstruction instr = solarNetClient.getInstruction(id, authorizationDate, authorization);
+    return (instr != null ? instr.getState() : SolarNodeInstructionState.Unknown);
+  }
+
+  @Override
   public SshSession startSession(String sessionId, long authorizationDate, String authorization)
       throws IOException {
     SshSession sess = sessionMap.get(sessionId);
@@ -178,10 +198,10 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new AuthorizationException("Session " + sessionId + " not available");
     }
 
-    Map<String, Object> instructionParams = createRemoteSshInstructionParams(sess);
+    Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
-    Long instructionId = solarNetClient.queueInstruction("StartRemoteSsh", sess.getNodeId(),
-        instructionParams, authorizationDate, authorization);
+    Long instructionId = solarNetClient.queueInstruction(INSTRUCTION_TOPIC_START_REMOTE_SSH,
+        sess.getNodeId(), instructionParams, authorizationDate, authorization);
 
     if (instructionId == null) {
       throw new AuthorizationException(
@@ -213,7 +233,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
     Map<String, Object> auditProps = sess.auditEventMap("ATTACH-TERM");
     auditProps.put("date", System.currentTimeMillis());
     auditProps.put("connectAddress", clientSession.getConnectAddress());
-    SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+    AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
 
     return sess;
   }
@@ -257,7 +277,7 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
         } finally {
           Map<String, Object> auditProps = sess.auditEventMap("DETACH-TERM");
           auditProps.put("date", System.currentTimeMillis());
-          SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+          AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
         }
       }
     });
@@ -279,10 +299,10 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       throw new AuthorizationException("Session " + sessionId + " not available");
     }
 
-    Map<String, Object> instructionParams = createRemoteSshInstructionParams(sess);
+    Map<String, String> instructionParams = SolarNetClient.createRemoteSshInstructionParams(sess);
 
-    Long instructionId = solarNetClient.queueInstruction("StopRemoteSsh", sess.getNodeId(),
-        instructionParams, authorizationDate, authorization);
+    Long instructionId = solarNetClient.queueInstruction(INSTRUCTION_TOPIC_STOP_REMOTE_SSH,
+        sess.getNodeId(), instructionParams, authorizationDate, authorization);
 
     if (instructionId == null) {
       throw new AuthorizationException(
@@ -315,18 +335,9 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
       Map<String, Object> auditProps = sess.auditEventMap("END");
       auditProps.put("date", now);
       auditProps.put("duration", secs);
-      SolarSshService.AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
+      AUDIT_LOG.info(JsonUtils.getJSONString(auditProps, "{}"));
       sess.setEstablished(false);
     }
-  }
-
-  private Map<String, Object> createRemoteSshInstructionParams(SshSession sess) {
-    Map<String, Object> instructionParams = new HashMap<>(4);
-    addInstructionParam(instructionParams, HOST_PARAM, sess.getSshHost());
-    addInstructionParam(instructionParams, USER_PARAM, sess.getId());
-    addInstructionParam(instructionParams, PORT_PARAM, sess.getSshPort());
-    addInstructionParam(instructionParams, REVERSE_PORT_PARAM, sess.getReverseSshPort());
-    return instructionParams;
   }
 
   /**
@@ -348,12 +359,6 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
         sessionMap.remove(sess.getId(), sess);
       }
     }
-  }
-
-  private void addInstructionParam(Map<String, Object> params, String key, Object value) {
-    int index = (params.size() / 2);
-    params.put("parameters[" + index + "].name", key);
-    params.put("parameters[" + index + "].value", value);
   }
 
   public void setMinPort(int minPort) {

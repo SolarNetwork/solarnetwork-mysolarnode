@@ -20,7 +20,7 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.service;
+package net.solarnetwork.solarssh.impl;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -51,6 +51,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
+import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.support.HttpClientSupport;
 import net.solarnetwork.web.security.WebConstants;
 
@@ -76,6 +77,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
 
   private String apiBaseUrl = "https://data.solarnetwork.net";
   private String viewPendingInstructionsPath = "/solaruser/api/v1/sec/instr/viewPending";
+  private String getInstructionPath = "/solaruser/api/v1/sec/instr/view";
   private String queueInstructionPath = "/solaruser/api/v1/sec/instr/add";
   private String viewNodeMetadataPath = "/solaruser/api/v1/sec/nodes/meta/";
 
@@ -123,7 +125,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(dateHeaderName, authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
 
-    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers);
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
       log.trace("Got pending instructions JSON: {}", MAPPER.writeValueAsString(node));
@@ -139,7 +141,29 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
   }
 
   @Override
-  public Long queueInstruction(String topic, Long nodeId, Map<String, Object> parameters,
+  public SolarNetInstruction getInstruction(Long id, long authorizationDate, String authorization)
+      throws IOException {
+    String dateHeaderName = signedDateHeaderName(authorization);
+    URI uri = apiUri(getInstructionPath + "?id=" + id);
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.set(HttpHeaders.HOST, uriHost(uri));
+    headers.setDate(dateHeaderName, authorizationDate);
+    headers.set(HttpHeaders.AUTHORIZATION, authorization);
+
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
+    JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
+    if (log.isTraceEnabled()) {
+      log.trace("Got instructions JSON: {}", MAPPER.writeValueAsString(node));
+    }
+    JsonNode data = node.path("data");
+    SolarNetInstruction result = MAPPER.readValue(MAPPER.treeAsTokens(data),
+        SolarNetInstruction.class);
+    return result;
+  }
+
+  @Override
+  public Long queueInstruction(String topic, Long nodeId, Map<String, ?> parameters,
       long authorizationDate, String authorization) throws IOException {
     URI uri = apiUri(queueInstructionPath);
 
@@ -152,7 +176,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(signedDateHeaderName(authorization), authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-    URLConnection conn = postForm(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers, params);
+    URLConnection conn = postForm(uri, MediaType.APPLICATION_JSON_VALUE, headers, params);
 
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
@@ -172,7 +196,7 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     headers.setDate(signedDateHeaderName(authorization), authorizationDate);
     headers.set(HttpHeaders.AUTHORIZATION, authorization);
 
-    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_UTF8_VALUE, headers);
+    URLConnection conn = get(uri, MediaType.APPLICATION_JSON_VALUE, headers);
     JsonNode node = MAPPER.readTree(getInputStreamFromURLConnection(conn));
     if (log.isTraceEnabled()) {
       log.trace("Got node metadata JSON: {}", MAPPER.writeValueAsString(node));
@@ -273,6 +297,10 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
 
   public void setViewNodeMetadataPath(String viewNodeMetadataPath) {
     this.viewNodeMetadataPath = viewNodeMetadataPath;
+  }
+
+  public void setGetInstructionPath(String getInstructionPath) {
+    this.getInstructionPath = getInstructionPath;
   }
 
 }

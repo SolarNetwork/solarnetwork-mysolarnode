@@ -8,7 +8,7 @@
   </appender>
 
   <appender name="AUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${solarssh.logdir}/solarssh-audit.log</file>
+    <file>${solarssh.logdir:-.}/solarssh-audit.log</file>
     <append>true</append>
     <immediateFlush>true</immediateFlush>
 
@@ -27,7 +27,7 @@
   </appender>
 
   <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${solarssh.logdir}/solarssh.log</file>
+    <file>${solarssh.logdir:-.}/solarssh.log</file>
     <append>true</append>
     <immediateFlush>true</immediateFlush>
 

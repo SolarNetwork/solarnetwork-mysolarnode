@@ -22,6 +22,8 @@
 
 package net.solarnetwork.solarssh.dao;
 
+import org.apache.sshd.common.session.Session;
+
 import net.solarnetwork.solarssh.domain.SshSession;
 
 /**
@@ -42,6 +44,17 @@ public interface SshSessionDao {
    *         if {@code id} is {@literal null}
    */
   SshSession findOne(String id);
+
+  /**
+   * Retrieve a {@code SshSession} for a specific SSHD session.
+   * 
+   * @param session
+   *        the SSHD session
+   * @return the matching entity, or {@literal null} if none found
+   * @throws IllegalArgumentException
+   *         if {@code session} is {@literal null}
+   */
+  SshSession findOne(Session session);
 
   /**
    * Deletes a given {@code SshSession}.

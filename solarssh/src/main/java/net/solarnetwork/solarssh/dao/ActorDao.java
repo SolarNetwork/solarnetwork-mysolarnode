@@ -1,7 +1,7 @@
 /* ==================================================================
- * SolarNodeInstructionState.java - 17/06/2017 9:38:04 PM
+ * ActorDao.java - 11/08/2020 11:30:49 AM
  * 
- * Copyright 2017 SolarNetwork.net Dev Team
+ * Copyright 2020 SolarNetwork.net Dev Team
  * 
  * This program is free software; you can redistribute it and/or 
  * modify it under the terms of the GNU General Public License as 
@@ -20,49 +20,29 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.domain;
+package net.solarnetwork.solarssh.dao;
+
+import net.solarnetwork.solarssh.domain.Actor;
 
 /**
- * Instruction state enumeration.
+ * DAO API for {@link Actor} instances.
  * 
  * @author matt
  * @version 1.0
  */
-public enum SolarNodeInstructionState {
+public interface ActorDao {
 
   /**
-   * The instruction state is not known.
+   * Get an actor that has had token credentials verified for a specific node ID.
+   * 
+   * @param nodeId
+   *        the node ID
+   * @param tokenId
+   *        the token to verify
+   * @param tokenSecret
+   *        the token secret
+   * @return the actor, or {@literal null} if the validated actor cannot be found
    */
-  Unknown,
-
-  /**
-   * The instruction is being queued.
-   */
-  Queuing,
-
-  /**
-   * The instruction has been queued, but not acknowledged yet.
-   */
-  Queued,
-
-  /**
-   * The instruction has been acknowledged, but has not been looked at yet.
-   */
-  Received,
-
-  /**
-   * The instruction has been acknowledged and is being executed currently.
-   */
-  Executing,
-
-  /**
-   * The instruction was acknowledged but has been declined and will not be executed.
-   */
-  Declined,
-
-  /**
-   * The instruction was acknowledged and has been executed.
-   */
-  Completed;
+  Actor getAuthenticatedActor(Long nodeId, String tokenId, String tokenSecret);
 
 }

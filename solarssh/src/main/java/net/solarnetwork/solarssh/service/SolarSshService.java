@@ -26,10 +26,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import net.solarnetwork.solarssh.dao.SshSessionDao;
+import net.solarnetwork.solarssh.domain.SolarNodeInstructionState;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
@@ -41,9 +39,6 @@ import net.solarnetwork.solarssh.domain.SshTerminalSettings;
  * @version 1.0
  */
 public interface SolarSshService extends SshSessionDao {
-
-  /** A logger for audit events. */
-  Logger AUDIT_LOG = LoggerFactory.getLogger("SolarSshService.AUDIT");
 
   /**
    * Get a new session with an unused reverse SSH port.
@@ -107,6 +102,28 @@ public interface SolarSshService extends SshSessionDao {
    */
   SshSession startSession(String sessionId, long authorizationDate, String authorization)
       throws IOException;
+
+  /**
+   * Get the state of an instruction.
+   * 
+   * <p>
+   * The {@code authorization} should be a pre-computed SNWS2 authorization header, which must match
+   * exactly a {@literal GET} request to the {@literal /api/v1/sec/instr/view?id=X} path using the
+   * provided authorization date.
+   * </p>
+   * 
+   * @param id
+   *        the ID of the instruction to get
+   * @param authorizationDate
+   *        the authorization date used in {@code authorization}
+   * @param authorization
+   *        the {@code Authorization} HTTP header value to use
+   * @return the state
+   * @throws IOException
+   *         for any communication error occurs
+   */
+  SolarNodeInstructionState getInstructionState(Long id, long authorizationDate,
+      String authorization) throws IOException;
 
   /**
    * Attach a SSH shell terminal to input and output streams.

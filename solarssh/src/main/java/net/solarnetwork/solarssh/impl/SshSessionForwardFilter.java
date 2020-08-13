@@ -20,7 +20,7 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.util.net.SshdSocketAddress;
@@ -48,6 +48,16 @@ public class SshSessionForwardFilter extends RejectAllForwardingFilter {
   public SshSessionForwardFilter(SshSessionDao sessionDao) {
     super();
     this.sessionDao = sessionDao;
+  }
+
+  @Override
+  public boolean canConnect(Type type, SshdSocketAddress address, Session session) {
+    if (type == Type.Direct) {
+      SshSession sess = sessionDao.findOne(session);
+      return (sess != null && SshdSocketAddress.isLoopback(address.getHostName())
+          && address.getPort() == sess.getReverseSshPort());
+    }
+    return checkAcceptance(type.getName(), session, address);
   }
 
   @Override

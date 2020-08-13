@@ -23,11 +23,13 @@
 package net.solarnetwork.solarssh.service;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
+import net.solarnetwork.solarssh.domain.SshSession;
 
 /**
  * API for SolarNet operations.
@@ -46,7 +48,6 @@ public interface SolarNetClient {
    * using the provided authorization date.
    * </p>
    * 
-   * 
    * @param nodeId
    *        the SolarNode ID to instruct
    * @param authorizationDate
@@ -59,6 +60,22 @@ public interface SolarNetClient {
    */
   List<SolarNetInstruction> pendingInstructions(Long nodeId, long authorizationDate,
       String authorization) throws IOException;
+
+  /**
+   * Get a specific instruction.
+   * 
+   * <p>
+   * The {@code authorization} should be a pre-computed SNWS2 authorization header, which must match
+   * exactly a {@literal GET} request to the {@literal /api/v1/sec/instr/view?id=X} path using the
+   * provided authorization date.
+   * </p>
+   * 
+   * @param id
+   *        the ID of the instruction to get
+   * @return the instruction, or {@literal null} if the instruction does not exist
+   */
+  SolarNetInstruction getInstruction(Long id, long authorizationDate, String authorization)
+      throws IOException;
 
   /**
    * Queue an instruction.
@@ -85,7 +102,7 @@ public interface SolarNetClient {
    * @throws IOException
    *         if any communication error occurs
    */
-  Long queueInstruction(String topic, Long nodeId, Map<String, Object> parameters,
+  Long queueInstruction(String topic, Long nodeId, Map<String, ?> parameters,
       long authorizationDate, String authorization) throws IOException;
 
   /**
@@ -109,5 +126,48 @@ public interface SolarNetClient {
    */
   GeneralDatumMetadata getNodeMetadata(Long nodeId, long authorizationDate, String authorization)
       throws IOException;
+
+  /**
+   * Add a SolarNetwork instruction parameter to a parameter map.
+   * 
+   * @param params
+   *        the parameters to add the instruction parameters to
+   * @param key
+   *        the instruction parameter key
+   * @param value
+   *        the instruction parameter value
+   */
+  static void addInstructionParam(Map<String, String> params, String key, Object value) {
+    int index = (params.size() / 2);
+    params.put("parameters[" + index + "].name", key);
+    params.put("parameters[" + index + "].value", value.toString());
+  }
+
+  /** The SolarNetwork instruction topic for a node to connect to SolarSSH. */
+  String INSTRUCTION_TOPIC_START_REMOTE_SSH = "StartRemoteSsh";
+
+  /** The SolarNetwork instruction topic for a node to disconnect from SolarSSH. */
+  String INSTRUCTION_TOPIC_STOP_REMOTE_SSH = "StopRemoteSsh";
+
+  String REVERSE_PORT_PARAM = "rport";
+  String PORT_PARAM = "port";
+  String USER_PARAM = "user";
+  String HOST_PARAM = "host";
+
+  /**
+   * Create a SolarNetwork instruction parameters object for a given {@link SshSession}.
+   * 
+   * @param sess
+   *        the session
+   * @return the parameters
+   */
+  public static Map<String, String> createRemoteSshInstructionParams(SshSession sess) {
+    Map<String, String> instructionParams = new LinkedHashMap<>(6);
+    addInstructionParam(instructionParams, HOST_PARAM, sess.getSshHost());
+    addInstructionParam(instructionParams, USER_PARAM, sess.getId());
+    addInstructionParam(instructionParams, PORT_PARAM, sess.getSshPort());
+    addInstructionParam(instructionParams, REVERSE_PORT_PARAM, sess.getReverseSshPort());
+    return instructionParams;
+  }
 
 }

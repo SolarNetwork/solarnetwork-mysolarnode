@@ -20,7 +20,7 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
 import java.security.PublicKey;
 

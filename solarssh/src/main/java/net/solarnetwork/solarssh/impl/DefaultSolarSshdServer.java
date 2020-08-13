@@ -1,5 +1,5 @@
 /* ==================================================================
- * DefaultSolarSshdService.java - Jun 11, 2017 3:42:49 PM
+ * DefaultSolarSshdServer.java - Jun 11, 2017 3:42:49 PM
  * 
  * Copyright 2017 SolarNetwork.net Dev Team
  * 
@@ -20,52 +20,42 @@
  * ==================================================================
  */
 
-package net.solarnetwork.solarssh.sshd;
+package net.solarnetwork.solarssh.impl;
 
+import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.sshd.common.channel.Channel;
-import org.apache.sshd.common.channel.ChannelListener;
-import org.apache.sshd.common.config.keys.FilePasswordProvider;
 import org.apache.sshd.common.io.IoSession;
-import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.common.session.helpers.AbstractSession;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.pubkey.CachingPublicKeyAuthenticator;
 import org.apache.sshd.server.session.ServerSession;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
 
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
-import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.solarssh.service.SolarSshdService;
 
 /**
  * Service to manage the SSH server.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
-public class DefaultSolarSshdService implements SolarSshdService, SessionListener, ChannelListener {
+public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarSshdService {
+
+  private static final String AUDIT_NODE_CONNECT = "NODE-CONNECT";
+
+  private static final String AUDIT_NODE_DISCONNECT = "NODE-DISCONNECT";
 
   /** The default port to listen on. */
   public static final int DEFAULT_LISTEN_PORT = 8022;
-
-  private final SshSessionDao sessionDao;
-
-  private int port = DEFAULT_LISTEN_PORT;
-  private Resource serverKeyResource;
-  private String serverKeyPassword;
 
   private SshServer server;
 
@@ -75,12 +65,10 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
    * @param sessionDao
    *        the session DAO to use
    */
-  public DefaultSolarSshdService(SshSessionDao sessionDao) {
-    super();
-    this.sessionDao = sessionDao;
+  public DefaultSolarSshdServer(SshSessionDao sessionDao) {
+    super(sessionDao);
+    setPort(DEFAULT_LISTEN_PORT);
   }
-
-  private static final Logger LOG = LoggerFactory.getLogger(DefaultSolarSshdService.class);
 
   /**
    * Start the server.
@@ -90,35 +78,18 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
     if (s != null) {
       return;
     }
-    s = SshServer.setUpDefaultServer();
-    s.setPort(port);
-
-    try {
-      FileKeyPairProvider keyPairProvider = new FileKeyPairProvider(
-          serverKeyResource.getFile().toPath());
-      keyPairProvider.setPasswordFinder(FilePasswordProvider.of(serverKeyPassword));
-      s.setKeyPairProvider(keyPairProvider);
-      LOG.info("Using SSH server key from {}", serverKeyResource);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    //s.setKeyPairProvider(new MappedKeyPairProvider(Collections.singletonList(kp)));
+    s = createServer();
 
     // TODO: verify if CachingPublicKeyAuthenticator is appropriate
     s.setPublickeyAuthenticator(
         new CachingPublicKeyAuthenticator(new SolarSshPublicKeyAuthenticator(sessionDao)));
-
-    s.setForwardingFilter(new SshSessionForwardFilter(sessionDao));
-
-    s.addSessionListener(this);
-    s.addChannelListener(this);
 
     try {
       s.start();
     } catch (IOException e) {
       throw new RuntimeException("Communication error starting SSH server", e);
     }
-    LOG.info("SSH server listening on port {}", port);
+    log.info("SSH server listening on port {}", getPort());
     server = s;
   }
 
@@ -133,7 +104,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         s.removeChannelListener(this);
         s.stop();
       } catch (IOException e) {
-        LOG.warn("Communication error stopping SSH server: {}", e.getMessage());
+        log.warn("Communication error stopping SSH server: {}", e.getMessage());
       }
     }
   }
@@ -144,7 +115,7 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
       return null;
     }
     List<AbstractSession> sessions = server.getActiveSessions();
-    LOG.debug("{} active sessions: {}", sessions != null ? sessions.size() : 0, sessions);
+    log.debug("{} active sessions: {}", sessions != null ? sessions.size() : 0, sessions);
     AbstractSession session = sessions.stream().filter(s -> sessionId.equals(s.getUsername()))
         .findFirst().orElse(null);
     return (ServerSession) session;
@@ -159,29 +130,29 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         sess.setEstablished(true);
         sess.setServerSession(session);
 
-        Map<String, Object> auditProps = sess.auditEventMap("NODE-CONNECT");
+        Map<String, Object> auditProps = sess.auditEventMap(AUDIT_NODE_CONNECT);
         auditProps.put("date", System.currentTimeMillis());
         IoSession ioSession = session.getIoSession();
         if (ioSession != null) {
           auditProps.put("remoteAddress", ioSession.getRemoteAddress());
         }
         auditProps.put("rport", sess.getReverseSshPort());
-        SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
+        AUDIT_LOG.info(getJSONString(auditProps, "{}"));
       }
     }
   }
 
   @Override
   public void sessionException(Session session, Throwable t) {
-    LOG.warn("Session {} exception", session.getUsername(), t);
-    logSessionClosed(session, t);
+    log.warn("Session {} exception", session.getUsername(), t);
+    logSessionClosed(session, AUDIT_NODE_DISCONNECT, t);
   }
 
   @Override
   public void sessionClosed(Session session) {
     String sessionId = session.getUsername();
     if (sessionId != null) {
-      logSessionClosed(session, null);
+      logSessionClosed(session, AUDIT_NODE_DISCONNECT, null);
       SshSession sess = sessionDao.findOne(sessionId);
       if (sess != null) {
         // check if matching remote address
@@ -204,87 +175,6 @@ public class DefaultSolarSshdService implements SolarSshdService, SessionListene
         }
       }
     }
-  }
-
-  private Map<String, Object> auditEventMap(Session session, String eventName) {
-    String sessionId = session.getUsername();
-    SshSession sess = sessionDao.findOne(sessionId);
-    Map<String, Object> map;
-    if (sess != null) {
-      map = sess.auditEventMap(eventName);
-    } else {
-      map = new LinkedHashMap<>(8);
-      map.put("sessionId", sessionId);
-      map.put("event", eventName);
-    }
-    long now = System.currentTimeMillis();
-    map.put("date", now);
-    if (sess != null) {
-      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
-      map.put("duration", secs);
-    }
-    return map;
-
-  }
-
-  private void logSessionClosed(Session session, Throwable t) {
-    String sessionId = session.getUsername();
-    LOG.info("Session {} closed", sessionId);
-    Map<String, Object> auditProps = auditEventMap(session, "NODE-DISCONNECT");
-    IoSession ioSession = session.getIoSession();
-    if (ioSession != null) {
-      auditProps.put("remoteAddress", ioSession.getRemoteAddress());
-    }
-    if (t != null) {
-      auditProps.put("error", t.toString());
-    }
-    SolarSshService.AUDIT_LOG.info(getJSONString(auditProps, "{}"));
-  }
-
-  @Override
-  public void channelOpenSuccess(Channel channel) {
-    LOG.debug("Channel {} open success", channel);
-  }
-
-  @Override
-  public void channelOpenFailure(Channel channel, Throwable reason) {
-    LOG.debug("Channel {} open failure", channel, reason);
-  }
-
-  @Override
-  public void channelClosed(Channel channel, Throwable reason) {
-    LOG.debug("Channel {} from session {} closed", channel, channel.getSession().getUsername(),
-        reason);
-  }
-
-  /**
-   * Set the port to listen for SSH connections on.
-   * 
-   * @param port
-   *        the port to listen on
-   */
-  public void setPort(int port) {
-    this.port = port;
-  }
-
-  /**
-   * Set the resource that holds the server key to use.
-   * 
-   * @param serverKeyResource
-   *        the server key resource
-   */
-  public void setServerKeyResource(Resource serverKeyResource) {
-    this.serverKeyResource = serverKeyResource;
-  }
-
-  /**
-   * Set the password for the server key resource.
-   * 
-   * @param serverKeyPassword
-   *        the server key password, or {@literal null} for no password
-   */
-  public void setServerKeyPassword(String serverKeyPassword) {
-    this.serverKeyPassword = serverKeyPassword;
   }
 
 }
