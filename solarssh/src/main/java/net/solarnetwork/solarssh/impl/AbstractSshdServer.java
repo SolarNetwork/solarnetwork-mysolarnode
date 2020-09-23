@@ -27,8 +27,10 @@ import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
 import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
-import java.util.LinkedHashMap;
+import java.net.InetAddress;
 import java.util.Map;
+
+import javax.cache.Cache;
 
 import org.apache.sshd.common.FactoryManager;
 import org.apache.sshd.common.channel.Channel;
@@ -43,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 
+import net.solarnetwork.solarssh.Globals;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SshSession;
 
@@ -69,6 +72,8 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
   private int authTimeoutSecs = DEFAULT_AUTH_TIMEOUT_SECS;
   private Resource serverKeyResource;
   private String serverKeyPassword;
+  private Cache<InetAddress, Byte> bruteForceDenyList;
+  private int bruteForceMaxTries = 1;
 
   /** A class-level logger. */
   protected final Logger log = LoggerFactory.getLogger(getClass());
@@ -110,6 +115,13 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
     s.addChannelListener(this);
 
     s.getProperties().put(FactoryManager.AUTH_TIMEOUT, authTimeoutSecs * 1000L);
+
+    if (bruteForceDenyList != null) {
+      BruteForceDenyEventListener listener = new BruteForceDenyEventListener(bruteForceDenyList);
+      listener.setMaxFails(bruteForceMaxTries);
+      s.setIoServiceEventListener(listener);
+    }
+
     return s;
   }
 
@@ -124,22 +136,7 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
    */
   protected Map<String, Object> auditEventMap(Session session, String eventName) {
     SshSession sess = sessionDao.findOne(session);
-    String sessionId = (sess != null ? sess.getId() : session.getUsername());
-    Map<String, Object> map;
-    if (sess != null) {
-      map = sess.auditEventMap(eventName);
-    } else {
-      map = new LinkedHashMap<>(8);
-      map.put("sessionId", sessionId);
-      map.put("event", eventName);
-    }
-    long now = System.currentTimeMillis();
-    map.put("date", now);
-    if (sess != null) {
-      long secs = (long) Math.ceil((now - sess.getCreated()) / 1000.0);
-      map.put("duration", secs);
-    }
-    return map;
+    return Globals.auditEventMap(session, sess, eventName);
   }
 
   /**
@@ -268,6 +265,44 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
    */
   public void setAuthTimeoutSecs(int authTimeoutSecs) {
     this.authTimeoutSecs = authTimeoutSecs;
+  }
+
+  /**
+   * Get the brute force deny list.
+   * 
+   * @return the deny list
+   */
+  public Cache<InetAddress, Byte> getBruteForceDenyList() {
+    return bruteForceDenyList;
+  }
+
+  /**
+   * Set the brute force deny list.
+   * 
+   * @param bruteForceDenyList
+   *        the deny list to set
+   */
+  public void setBruteForceDenyList(Cache<InetAddress, Byte> bruteForceDenyList) {
+    this.bruteForceDenyList = bruteForceDenyList;
+  }
+
+  /**
+   * Get the brute force max tries.
+   * 
+   * @return the max tries
+   */
+  public int getBruteForceMaxTries() {
+    return bruteForceMaxTries;
+  }
+
+  /**
+   * Set the brute force max tries.
+   * 
+   * @param bruteForceMaxTries
+   *        the count to set
+   */
+  public void setBruteForceMaxTries(int bruteForceMaxTries) {
+    this.bruteForceMaxTries = bruteForceMaxTries;
   }
 
 }

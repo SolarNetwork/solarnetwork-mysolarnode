@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
+import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.Actor;
 import net.solarnetwork.solarssh.domain.DirectSshUsername;
@@ -140,6 +141,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
             authBuilder.build());
         return waitForNodeInstructionToComplete(sshSession.getId(), tokenId,
             INSTRUCTION_TOPIC_START_REMOTE_SSH, sshSession.getStartInstructionId(), authBuilder);
+      } catch (AuthorizationException e) {
+        log.info("Authorization failed creating new SshSession for {}", username);
       } catch (IOException e) {
         log.info("Communication error creating new SshSession: {}", e.toString());
         // if we started the node remote SSH, stop it now
@@ -152,13 +155,12 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
               .queryParams(instructionParams);
           try {
             solarSshService.stopSession(sshSession.getId(), now.getTime(), authBuilder.build());
-          } catch (IOException e2) {
+          } catch (Exception e2) {
             // ignore
           }
           log.info("Issued {} instruction for token {} node {} with parameters {}",
               INSTRUCTION_TOPIC_STOP_REMOTE_SSH, tokenId, nodeId, instructionParams);
         }
-        return false;
       }
     }
     return false;

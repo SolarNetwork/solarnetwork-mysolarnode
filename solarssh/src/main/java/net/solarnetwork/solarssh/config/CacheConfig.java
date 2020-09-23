@@ -17,6 +17,7 @@
 
 package net.solarnetwork.solarssh.config;
 
+import java.net.InetAddress;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
@@ -24,6 +25,12 @@ import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 
+import org.ehcache.config.CacheConfiguration;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.ExpiryPolicyBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+import org.ehcache.config.units.MemoryUnit;
+import org.ehcache.jsr107.Eh107Configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +62,15 @@ public class CacheConfig {
   @Value("${cache.actor.ttl:900}")
   private int actorCacheSeconds = 900;
 
+  @Value("${cache.bruteForceDeny.ttl:24}")
+  private int bruteForceDenyCacheDays = 24;
+
+  @Value("${cache.bruteForceDeny.maxRamEntries:5000}")
+  private int bruteForceDenyCacheMaxRamEntries = 5000;
+
+  @Value("${cache.bruteForceDeny.maxDiskMb:100}")
+  private int bruteForceDenyCacheMaxDiskMb = 100;
+
   /**
    * Get the actor cache.
    * 
@@ -78,5 +94,34 @@ public class CacheConfig {
     conf.setStoreByValue(false);
     return conf;
   }
+
+  /**
+   * The brute-force mitigation deny list.
+   * 
+   * @return the cache
+   */
+  @Bean
+  @Qualifier("brute-force-deny-list")
+  @Profile("!default")
+  public Cache<InetAddress, Byte> bruteForceDenyListCache() {
+    if (cacheManager == null) {
+      return null;
+    }
+    return cacheManager.createCache("brute-force-deny-list",
+        bruteForceDenyListCacheConfiguration());
+  }
+
+  // CHECKSTYLE OFF: LineLength
+  private javax.cache.configuration.Configuration<InetAddress, Byte> bruteForceDenyListCacheConfiguration() {
+    CacheConfiguration<InetAddress, Byte> conf = CacheConfigurationBuilder
+        .newCacheConfigurationBuilder(InetAddress.class, Byte.class,
+            ResourcePoolsBuilder.heap(bruteForceDenyCacheMaxRamEntries)
+                .disk(bruteForceDenyCacheMaxDiskMb, MemoryUnit.MB, true))
+        .withExpiry(ExpiryPolicyBuilder
+            .timeToIdleExpiration(java.time.Duration.ofHours(bruteForceDenyCacheDays)))
+        .build();
+    return Eh107Configuration.fromEhcacheCacheConfiguration(conf);
+  }
+  // CHECKSTYLE ON: LineLength
 
 }

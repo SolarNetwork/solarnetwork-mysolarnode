@@ -37,6 +37,7 @@ import org.apache.sshd.common.io.IoSession;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
 import org.apache.sshd.server.SshServer;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.channel.ChannelSessionFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -107,7 +108,15 @@ public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
     pwAuth.setInstructionCompletedWaitMs(instructionCompletedWaitMs);
     pwAuth.setInstructionIncompleteWaitMs(instructionIncompleteWaitMs);
     pwAuth.setMaxNodeInstructionWaitSecs(getAuthTimeoutSecs());
-    s.setPasswordAuthenticator(pwAuth);
+
+    PasswordAuthenticator auth = pwAuth;
+    if (getBruteForceDenyList() != null) {
+      BruteForceDenyPasswordAuthenticator bf = new BruteForceDenyPasswordAuthenticator(pwAuth,
+          getBruteForceDenyList());
+      bf.setMaxFails(getBruteForceMaxTries());
+      auth = bf;
+    }
+    s.setPasswordAuthenticator(auth);
 
     try {
       s.start();
@@ -158,7 +167,7 @@ public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
 
   @Override
   public void sessionException(Session session, Throwable t) {
-    log.warn("Session {} exception", session.getUsername(), t);
+    log.debug("Session {} exception", session.getUsername(), t);
     logSessionClosed(session, AUDIT_DIRECT_DISCONNECT, t);
   }
 
