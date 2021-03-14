@@ -42,9 +42,15 @@ import net.solarnetwork.solarssh.Globals;
  * Base class for brute force mitigation authenticators.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public abstract class AbstractBruteForceAuthenticator {
+
+  /** The audit event name when an IP address is tracked after an authentication failure. */
+  public static final String AUDIT_EVENT_IP_TRACKING_FAILED_ATTEMPT = "IP-TRACK-FAIL";
+
+  /** The audit event name when an IP address is blocked. */
+  public static final String AUDIT_EVENT_IP_TRACKING_BLOCKED = "IP-TRACK-BLOCKED";
 
   protected final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -91,11 +97,12 @@ public abstract class AbstractBruteForceAuthenticator {
           session.close(false);
           log.info("{} authentication attempt [{}] blocked after {} attempts", src, username,
               count);
-          auditBruteForceEvent(session, username, src, attempts, "ip-block");
+          auditBruteForceEvent(session, username, src, attempts, AUDIT_EVENT_IP_TRACKING_BLOCKED);
           throw new RuntimeSshException("Blocked.");
         } else {
           log.info("{} authentication attempt [{}] failed: attempt {}", src, username, count);
-          auditBruteForceEvent(session, username, src, attempts, "ip-track-fail");
+          auditBruteForceEvent(session, username, src, attempts,
+              AUDIT_EVENT_IP_TRACKING_FAILED_ATTEMPT);
         }
       }
     }
