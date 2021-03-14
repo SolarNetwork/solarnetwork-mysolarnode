@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 
+import org.apache.sshd.common.RuntimeSshException;
 import org.apache.sshd.server.auth.AsyncAuthException;
 import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.PasswordChangeRequiredException;
@@ -40,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
+import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.Actor;
 import net.solarnetwork.solarssh.domain.DirectSshUsername;
@@ -138,8 +140,10 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
             .queryParams(instructionParams);
         sshSession = solarSshService.startSession(sshSession.getId(), now.getTime(),
             authBuilder.build());
-        return waitForNodeInstructionToComplete(sshSession.getId(), tokenId,
+        return waitForNodeInstructionToComplete(sshSession.getId(), nodeId, tokenId,
             INSTRUCTION_TOPIC_START_REMOTE_SSH, sshSession.getStartInstructionId(), authBuilder);
+      } catch (AuthorizationException e) {
+        log.info("Authorization failed creating new SshSession for {}", username);
       } catch (IOException e) {
         log.info("Communication error creating new SshSession: {}", e.toString());
         // if we started the node remote SSH, stop it now
@@ -152,20 +156,20 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
               .queryParams(instructionParams);
           try {
             solarSshService.stopSession(sshSession.getId(), now.getTime(), authBuilder.build());
-          } catch (IOException e2) {
+          } catch (Exception e2) {
             // ignore
           }
           log.info("Issued {} instruction for token {} node {} with parameters {}",
               INSTRUCTION_TOPIC_STOP_REMOTE_SSH, tokenId, nodeId, instructionParams);
         }
-        return false;
+        throw new RuntimeSshException("Communication error creating new SshSession", e);
       }
     }
     return false;
   }
 
-  private boolean waitForNodeInstructionToComplete(String sessionId, String tokenId, String topic,
-      Long instructionId, AuthorizationV2Builder authBuilder) throws IOException {
+  private boolean waitForNodeInstructionToComplete(String sessionId, Long nodeId, String tokenId,
+      String topic, Long instructionId, AuthorizationV2Builder authBuilder) throws IOException {
     final long expire = System.currentTimeMillis() + (1000L * this.maxNodeInstructionWaitSecs);
     while (System.currentTimeMillis() < expire) {
       Date now = new Date();
@@ -191,7 +195,9 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
             break;
           }
         }
-        return false;
+        throw new IOException("Timeout waiting " + this.maxNodeInstructionWaitSecs
+            + "s for session " + sessionId + " node " + nodeId + " connection after instruction {}"
+            + instructionId + " completed.");
       } else if (state == SolarNodeInstructionState.Declined) {
         log.info("Token {} {} instruction {} was declined.", tokenId, topic, instructionId);
         return false;
@@ -203,7 +209,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
         break;
       }
     }
-    return false;
+    throw new IOException("Timeout waiting " + this.maxNodeInstructionWaitSecs + "s for session "
+        + sessionId + " node " + nodeId + " instruction {}" + instructionId + " to complete.");
   }
 
   /**

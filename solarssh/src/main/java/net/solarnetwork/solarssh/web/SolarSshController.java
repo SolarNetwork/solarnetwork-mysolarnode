@@ -22,13 +22,26 @@
 
 package net.solarnetwork.solarssh.web;
 
+import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.solarssh.web.WebConstants.PRESIGN_AUTHORIZATION_HEADER;
+import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import javax.cache.Cache;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.sshd.common.RuntimeSshException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,6 +52,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import net.solarnetwork.solarssh.AuthorizationException;
+import net.solarnetwork.solarssh.Globals;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.service.SolarSshService;
 import net.solarnetwork.web.domain.Response;
@@ -54,7 +68,16 @@ import net.solarnetwork.web.security.WebConstants;
 @RequestMapping("/api/v1/ssh")
 public class SolarSshController {
 
+  private final Logger log = LoggerFactory.getLogger(getClass());
+
   private final SolarSshService solarSshService;
+
+  @Autowired(required = false)
+  @Qualifier("brute-force-deny-list")
+  private Cache<InetAddress, Byte> bruteForceDenyList;
+
+  @Value("${ssh.bruteForce.maxTries:3}")
+  private int bruteForceMaxTries = 3;
 
   @Autowired
   public SolarSshController(SolarSshService solarSshService) {
@@ -78,9 +101,14 @@ public class SolarSshController {
       HttpServletRequest request) throws IOException {
     long authorizationDate = request.getDateHeader(WebConstants.HEADER_DATE);
     String preSignedAuthorization = request.getHeader(PRESIGN_AUTHORIZATION_HEADER);
-    SshSession session = solarSshService.createNewSession(nodeId, authorizationDate,
-        preSignedAuthorization);
-    return Response.response(session);
+    try {
+      SshSession session = solarSshService.createNewSession(nodeId, authorizationDate,
+          preSignedAuthorization);
+      return Response.response(session);
+    } catch (AuthorizationException e) {
+      handleAuthFailureBruteForce(request, nodeId, preSignedAuthorization);
+      throw e;
+    }
   }
 
   /**
@@ -99,9 +127,14 @@ public class SolarSshController {
       HttpServletRequest request) throws IOException {
     long authorizationDate = request.getDateHeader(WebConstants.HEADER_DATE);
     String preSignedAuthorization = request.getHeader(PRESIGN_AUTHORIZATION_HEADER);
-    SshSession session = solarSshService.startSession(sessionId, authorizationDate,
-        preSignedAuthorization);
-    return Response.response(session);
+    try {
+      SshSession session = solarSshService.startSession(sessionId, authorizationDate,
+          preSignedAuthorization);
+      return Response.response(session);
+    } catch (AuthorizationException e) {
+      handleAuthFailureBruteForce(request, sessionId, preSignedAuthorization);
+      throw e;
+    }
   }
 
   /**
@@ -149,6 +182,93 @@ public class SolarSshController {
   public ResponseEntity<Response<Object>> ioException(AuthorizationException e) {
     return new ResponseEntity<Response<Object>>(
         new Response<Object>(Boolean.FALSE, "570", e.getMessage(), null), HttpStatus.FORBIDDEN);
+  }
+
+  private static final Pattern SNWS_V2_KEY_PATTERN = Pattern.compile("Credential=([^,]+)(?:,|$)");
+
+  private void handleAuthFailureBruteForce(HttpServletRequest request, Object sessionId,
+      String preSignedAuthorization) {
+    if (bruteForceDenyList == null) {
+      return;
+    }
+    String remoteAddr = request.getRemoteAddr();
+    String proxyRemoteAddr = request.getHeader("X-Forwarded-For");
+    if (proxyRemoteAddr != null) {
+      remoteAddr = proxyRemoteAddr;
+    }
+    try {
+      InetAddress src = InetAddress.getByName(remoteAddr);
+      if (!src.isLoopbackAddress()) {
+        Byte count = bruteForceDenyList.get(src);
+        if (count == null) {
+          count = (byte) 1;
+        } else if (count.byteValue() != (byte) 0xFF) {
+          count = (byte) ((count.byteValue() & 0xFF) + 1);
+        }
+        log.info("{} authentication attempt [{}] failed: attempt {}", src, sessionId,
+            Byte.toUnsignedInt(count));
+        bruteForceDenyList.put(src, count);
+        final int attempts = Byte.toUnsignedInt(count);
+        if (attempts >= bruteForceMaxTries) {
+          String username = null;
+          Matcher m = SNWS_V2_KEY_PATTERN.matcher(preSignedAuthorization);
+          if (m.find()) {
+            username = m.group(1);
+          }
+          logBruteForceDeny(username, src, attempts, "block");
+          throw new RuntimeSshException("Blocked.");
+        }
+      }
+    } catch (UnknownHostException e) {
+      // nothing we can do
+    }
+  }
+
+  private void logBruteForceDeny(String username, InetAddress src, int count,
+      String auditEventName) {
+    log.info("{} authentication attempt [{}] blocked after {} attempts", src, username, count);
+    Map<String, Object> auditProps = Globals.auditEventMap(username, auditEventName);
+    auditProps.put("remoteAddress", src);
+    auditProps.put("attempts", count);
+    AUDIT_LOG.info(getJSONString(auditProps, "{}"));
+  }
+
+  /**
+   * Get the brute force deny list.
+   * 
+   * @return the deny list
+   */
+  public Cache<InetAddress, Byte> getBruteForceDenyList() {
+    return bruteForceDenyList;
+  }
+
+  /**
+   * Set the brute force deny list.
+   * 
+   * @param bruteForceDenyList
+   *        the deny list to set
+   */
+  public void setBruteForceDenyList(Cache<InetAddress, Byte> bruteForceDenyList) {
+    this.bruteForceDenyList = bruteForceDenyList;
+  }
+
+  /**
+   * Get the brute force max tries.
+   * 
+   * @return the max tries
+   */
+  public int getBruteForceMaxTries() {
+    return bruteForceMaxTries;
+  }
+
+  /**
+   * Set the brute force max tries.
+   * 
+   * @param bruteForceMaxTries
+   *        the count to set
+   */
+  public void setBruteForceMaxTries(int bruteForceMaxTries) {
+    this.bruteForceMaxTries = bruteForceMaxTries;
   }
 
 }

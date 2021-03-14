@@ -22,9 +22,13 @@
 
 package net.solarnetwork.solarssh.config;
 
+import java.net.InetAddress;
 import java.net.URI;
 
+import javax.cache.Cache;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,6 +68,9 @@ public class ServiceConfig {
   @Value("${ssh.keyPassword:changeit}")
   private String sshKeyPassword = null;
 
+  @Value("${ssh.bruteForce.maxTries:3}")
+  private int bruteForceMaxTries = 3;
+
   @Value("${ssh.reversePort.min:50000}")
   private int sshReversePortMin = 50000;
 
@@ -90,6 +97,10 @@ public class ServiceConfig {
 
   @Autowired
   private JdbcOperations jdbcOps;
+
+  @Autowired(required = false)
+  @Qualifier("brute-force-deny-list")
+  private Cache<InetAddress, Byte> bruteForceDenyList;
 
   /**
    * Initialize the {@link SolarSshService} service.
@@ -135,6 +146,8 @@ public class ServiceConfig {
     service.setPort(sshPort);
     service.setServerKeyResource(sshKeyResource);
     service.setServerKeyPassword(sshKeyPassword);
+    service.setBruteForceDenyList(bruteForceDenyList);
+    service.setBruteForceMaxTries(bruteForceMaxTries);
     return service;
   }
 
@@ -154,6 +167,8 @@ public class ServiceConfig {
     service.setAuthTimeoutSecs(authTimeoutSecs);
     service.setInstructionCompletedWaitMs(instructionCompletedWaitMs);
     service.setInstructionIncompleteWaitMs(instructionIncompleteWaitMs);
+    service.setBruteForceDenyList(bruteForceDenyList);
+    service.setBruteForceMaxTries(bruteForceMaxTries);
     return service;
   }
 

@@ -256,7 +256,9 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     if (conn instanceof HttpURLConnection) {
       HttpURLConnection http = (HttpURLConnection) conn;
       int status = http.getResponseCode();
-      if (status < 200 || status > 299) {
+      if (status == 401 || status == 403) {
+        throw new AuthorizationException("HTTP request denied.");
+      } else if (status < 200 || status > 299) {
         throw new IOException("HTTP result status not in the 200-299 range: "
             + http.getResponseCode() + " " + http.getResponseMessage());
       }
@@ -275,7 +277,9 @@ public class DefaultSolarNetClient extends HttpClientSupport implements SolarNet
     if (conn instanceof HttpURLConnection) {
       HttpURLConnection http = (HttpURLConnection) conn;
       int status = http.getResponseCode();
-      if (status < 200 || status > 299) {
+      if (status == 401 || status == 403) {
+        throw new AuthorizationException("HTTP request denied.");
+      } else if (status < 200 || status > 299) {
         throw new IOException("HTTP result status not in the 200-299 range: "
             + http.getResponseCode() + " " + http.getResponseMessage());
       }
