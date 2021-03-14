@@ -85,25 +85,28 @@ public abstract class AbstractBruteForceAuthenticator {
         } else if (count.byteValue() != (byte) 0xFF) {
           count = (byte) ((count.byteValue() & 0xFF) + 1);
         }
-        log.info("{} authentication attempt [{}] failed: attempt {}", src, username,
-            Byte.toUnsignedInt(count));
         denyList.put(src, count);
         final int attempts = Byte.toUnsignedInt(count);
         if (attempts >= maxFails) {
           session.close(false);
-          logBruteForceDeny(session, username, src, attempts, "block");
+          log.info("{} authentication attempt [{}] blocked after {} attempts", src, username,
+              count);
+          auditBruteForceEvent(session, username, src, attempts, "ip-block");
           throw new RuntimeSshException("Blocked.");
+        } else {
+          log.info("{} authentication attempt [{}] failed: attempt {}", src, username, count);
+          auditBruteForceEvent(session, username, src, attempts, "ip-track-fail");
         }
       }
     }
   }
 
-  private void logBruteForceDeny(ServerSession session, String username, InetAddress src, int count,
-      String auditEventName) {
-    log.info("{} authentication attempt [{}] blocked after {} attempts", src, username, count);
+  private void auditBruteForceEvent(ServerSession session, String username, InetAddress src,
+      int count, String auditEventName) {
     Map<String, Object> auditProps = Globals.auditEventMap(session, null, auditEventName);
     auditProps.put("remoteAddress", src);
     auditProps.put("attempts", count);
+    auditProps.put("username", username);
     AUDIT_LOG.info(getJSONString(auditProps, "{}"));
   }
 
