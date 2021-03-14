@@ -63,7 +63,7 @@ public class CacheConfig {
   private int actorCacheSeconds = 900;
 
   @Value("${cache.bruteForceDeny.ttl:24}")
-  private int bruteForceDenyCacheDays = 24;
+  private int bruteForceDenyCacheHours = 24;
 
   @Value("${cache.bruteForceDeny.maxRamEntries:5000}")
   private int bruteForceDenyCacheMaxRamEntries = 5000;
@@ -118,7 +118,7 @@ public class CacheConfig {
             ResourcePoolsBuilder.heap(bruteForceDenyCacheMaxRamEntries)
                 .disk(bruteForceDenyCacheMaxDiskMb, MemoryUnit.MB, true))
         .withExpiry(ExpiryPolicyBuilder
-            .timeToIdleExpiration(java.time.Duration.ofHours(bruteForceDenyCacheDays)))
+            .timeToLiveExpiration(java.time.Duration.ofHours(bruteForceDenyCacheHours)))
         .build();
     return Eh107Configuration.fromEhcacheCacheConfiguration(conf);
   }
