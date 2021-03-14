@@ -75,12 +75,14 @@ public class BruteForceDenyEventListener implements IoServiceEventListener {
       SocketAddress service) throws IOException {
     if (remote instanceof InetSocketAddress) {
       InetAddress src = ((InetSocketAddress) remote).getAddress();
-      Byte count = denyList.get(src);
-      if (count != null) {
-        final int attempts = Byte.toUnsignedInt(count);
-        if (attempts >= maxFails) {
-          logBruteForceDeny(src, attempts, "blocked");
-          throw new IOException("Blocked.");
+      if (denyList.containsKey(src)) {
+        Byte count = denyList.get(src);
+        if (count != null) {
+          final int attempts = Byte.toUnsignedInt(count);
+          if (attempts >= maxFails) {
+            logBruteForceDeny(src, attempts, "blocked");
+            throw new IOException("Blocked.");
+          }
         }
       }
     }
