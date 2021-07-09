@@ -22,8 +22,8 @@
 
 package net.solarnetwork.solarssh.impl;
 
+import static net.solarnetwork.codec.JsonUtils.getJSONString;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
-import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -42,7 +42,7 @@ import net.solarnetwork.solarssh.Globals;
  * Base class for brute force mitigation authenticators.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public abstract class AbstractBruteForceAuthenticator {
 

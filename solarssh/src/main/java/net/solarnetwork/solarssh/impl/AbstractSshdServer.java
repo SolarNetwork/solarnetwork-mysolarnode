@@ -22,9 +22,9 @@
 
 package net.solarnetwork.solarssh.impl;
 
+import static net.solarnetwork.codec.JsonUtils.getJSONString;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
-import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -53,7 +53,7 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * Abstract base class for SolarSSH SSHD server instances.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public abstract class AbstractSshdServer implements SessionListener, ChannelListener {
 
