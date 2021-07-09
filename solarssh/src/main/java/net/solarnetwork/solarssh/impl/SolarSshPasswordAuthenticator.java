@@ -200,7 +200,8 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
             + instructionId + " completed.");
       } else if (state == SolarNodeInstructionState.Declined) {
         log.info("Token {} {} instruction {} was declined.", tokenId, topic, instructionId);
-        return false;
+        throw new RuntimeSshException("Session " + sessionId + " node " + nodeId + " instruction "
+            + instructionId + " was declined.");
       }
       // wait a few ticks
       try {
