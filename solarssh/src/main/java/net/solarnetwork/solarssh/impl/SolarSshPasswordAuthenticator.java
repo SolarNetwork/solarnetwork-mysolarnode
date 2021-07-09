@@ -196,7 +196,7 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
           }
         }
         throw new IOException("Timeout waiting " + this.maxNodeInstructionWaitSecs
-            + "s for session " + sessionId + " node " + nodeId + " connection after instruction {}"
+            + "s for session " + sessionId + " node " + nodeId + " connection after instruction "
             + instructionId + " completed.");
       } else if (state == SolarNodeInstructionState.Declined) {
         log.info("Token {} {} instruction {} was declined.", tokenId, topic, instructionId);
