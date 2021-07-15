@@ -45,18 +45,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import net.solarnetwork.codec.JsonUtils;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SshCredentials;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.util.JsonUtils;
 
 /**
  * Websocket endpoint for SolarSSH connections.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SolarSshEndpoint extends Endpoint implements MessageHandler.Whole<String> {
 

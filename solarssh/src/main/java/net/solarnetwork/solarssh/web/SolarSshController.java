@@ -22,9 +22,9 @@
 
 package net.solarnetwork.solarssh.web;
 
+import static net.solarnetwork.codec.JsonUtils.getJSONString;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.solarssh.web.WebConstants.PRESIGN_AUTHORIZATION_HEADER;
-import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -62,7 +62,7 @@ import net.solarnetwork.web.security.WebConstants;
  * Web controller for connection commands.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 @RestController
 @RequestMapping("/api/v1/ssh")

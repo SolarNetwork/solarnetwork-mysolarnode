@@ -24,9 +24,9 @@ package net.solarnetwork.solarssh.impl;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableList;
+import static net.solarnetwork.codec.JsonUtils.getJSONString;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
 import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_STOP_REMOTE_SSH;
-import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -53,7 +53,7 @@ import net.solarnetwork.web.security.AuthorizationV2Builder;
  * Default SSH server service.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
 

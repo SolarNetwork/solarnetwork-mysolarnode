@@ -89,6 +89,7 @@ dependencies {
     implementation 'net.i2p.crypto:eddsa:0.3.0'
 
 	// SolarNetwork
+	implementation 'net.solarnetwork.common:net.solarnetwork.common:1.74+'
 	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:1.17+'
 	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.16+'
 	

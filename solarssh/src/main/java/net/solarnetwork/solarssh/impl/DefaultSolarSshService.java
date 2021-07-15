@@ -52,6 +52,7 @@ import org.apache.sshd.common.util.io.NoCloseOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.solarnetwork.codec.JsonUtils;
 import net.solarnetwork.domain.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
@@ -62,13 +63,12 @@ import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.domain.SshTerminalSettings;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.util.JsonUtils;
 
 /**
  * Default implementation of {@link SolarSshService}.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
 

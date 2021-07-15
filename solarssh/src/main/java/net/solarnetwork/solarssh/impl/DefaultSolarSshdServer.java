@@ -22,8 +22,8 @@
 
 package net.solarnetwork.solarssh.impl;
 
+import static net.solarnetwork.codec.JsonUtils.getJSONString;
 import static net.solarnetwork.solarssh.Globals.AUDIT_LOG;
-import static net.solarnetwork.util.JsonUtils.getJSONString;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -46,7 +46,7 @@ import net.solarnetwork.solarssh.service.SolarSshdService;
  * Service to manage the SSH server.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarSshdService {
 
