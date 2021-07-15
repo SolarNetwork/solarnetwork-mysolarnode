@@ -14,9 +14,7 @@ import { select, selectAll } from "d3-selection";
 import { json as jsonRequest } from "d3-request";
 import dialogPolyfill from "dialog-polyfill";
 import { Terminal } from "xterm";
-import * as attach from "xterm/lib/addons/attach/attach";
-
-Terminal.applyAddon(attach);
+import { AttachAddon } from "xterm-addon-attach";
 
 // for development, can un-comment out the sshEnv and instrEnv objects
 // and configure values for your local dev environment.
@@ -71,6 +69,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 
   var session; // SshSession
   var socket;
+  var attachAddon;
   var socketState = 0;
   var setupGuiWindow;
   var sshCredentials;
@@ -130,6 +129,7 @@ var solarSshApp = function(sshUrlHelper, options) {
   function resetWebSocket() {
     if (socket) {
       socket.close();
+      terminal.reset();
       socket = undefined;
     }
     socketState = 0;
@@ -425,6 +425,8 @@ var solarSshApp = function(sshUrlHelper, options) {
       SolarSshTerminalWebSocketSubProtocol
     );
     socket = new WebSocket(url, SolarSshTerminalWebSocketSubProtocol);
+    attachAddon = new AttachAddon(socket);
+    terminal.loadAddon(attachAddon);
     socket.onopen = webSocketOpen;
     socket.onmessage = webSocketMessage;
     socket.onerror = webSocketError;
@@ -500,7 +502,6 @@ var solarSshApp = function(sshUrlHelper, options) {
     if (msg.success) {
       termWriteSuccess();
       socketState = 1;
-      terminal.attach(socket);
       terminal.focus();
     } else {
       termWriteFailed();

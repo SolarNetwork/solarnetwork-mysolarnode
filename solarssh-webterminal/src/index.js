@@ -1,5 +1,5 @@
 import "dialog-polyfill/dialog-polyfill.css";
-import "xterm/dist/xterm.css";
+import "xterm/css/xterm.css";
 import "./solarssh.css";
 import "./favicon.png";
 
