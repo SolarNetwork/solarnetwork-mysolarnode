@@ -45,8 +45,9 @@ const config = {
                     node: "current"
                   },
                   modules: false,
-                  corejs: "2",
-                  useBuiltIns: "entry"
+                  useBuiltIns: "entry",
+                  corejs: "3.11",
+                  debug: false
                 }
               ]
             ]
@@ -57,8 +58,8 @@ const config = {
         test: /\.css$/,
         use: [
           {
-            loader: "style-loader/url",
-            options: { sourceMap: false }
+            loader: "style-loader",
+            options: { injectType: "linkTag" }
           },
           {
             loader: "file-loader?name=css/[name].[ext]"
