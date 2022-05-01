@@ -8,7 +8,7 @@ import {
   SshCloseCodes,
   SshSession,
   SshTerminalSettings,
-  SshUrlHelper
+  SshUrlHelper,
 } from "solarnetwork-api-ssh";
 import { select, selectAll } from "d3-selection";
 import { json as jsonRequest } from "d3-request";
@@ -41,10 +41,10 @@ const ansiEscapes = {
       green: "\x1B[32;1m",
       red: "\x1B[31;1m",
       yellow: "\x1B[33;1m",
-      white: "\x1B[37;1m"
-    }
+      white: "\x1B[37;1m",
+    },
   },
-  reset: "\x1B[0m"
+  reset: "\x1B[0m",
 };
 
 var app;
@@ -56,7 +56,7 @@ var app;
  * @param {UrlHelper} sshUrlHelper the URL helper with the `SshUrlHelperMixin` for accessing SolarSSH with
  * @param {Object} [options] optional configuration options
  */
-var solarSshApp = function(sshUrlHelper, options) {
+var solarSshApp = function (sshUrlHelper, options) {
   var self = { version: "0.3.0" };
   var config = options || {};
   var sshCredentialsDialog;
@@ -196,7 +196,7 @@ var solarSshApp = function(sshUrlHelper, options) {
   function executeWithPreSignedAuthorization(method, url, auth) {
     auth.snDate(true).date(new Date());
     var req = jsonRequest(url);
-    req.on("beforesend", function(request) {
+    req.on("beforesend", function (request) {
       request.setRequestHeader("X-SN-Date", auth.requestDateHeaderValue);
       request.setRequestHeader(
         "X-SN-PreSignedAuthorization",
@@ -209,9 +209,8 @@ var solarSshApp = function(sshUrlHelper, options) {
   }
 
   function connect() {
-    sshUrlHelper.nodeInstructionAuthBuilder.tokenId = select(
-      "input[name=token]"
-    ).property("value");
+    sshUrlHelper.nodeInstructionAuthBuilder.tokenId =
+      select("input[name=token]").property("value");
     sshUrlHelper.nodeInstructionAuthBuilder.saveSigningKey(
       select("input[name=secret]").property("value")
     );
@@ -229,7 +228,7 @@ var solarSshApp = function(sshUrlHelper, options) {
     terminal.write("Requesting new SSH session... ");
     return executeWithPreSignedAuthorization("GET", url, auth)
       .on("load", handleCreateSession)
-      .on("error", function(xhr) {
+      .on("error", function (xhr) {
         console.error("Failed to create session: %s", xhr.responseText);
         enableSubmit(true);
         termWriteFailed();
@@ -258,7 +257,7 @@ var solarSshApp = function(sshUrlHelper, options) {
     terminal.write("Requesting SolarNode to establish remote SSH session... ");
     return executeWithPreSignedAuthorization("GET", url, auth)
       .on("load", handleStartSession)
-      .on("error", function(xhr) {
+      .on("error", function (xhr) {
         console.error("Failed to start session: %s", xhr.responseText);
         enableSubmit(true);
       });
@@ -287,7 +286,7 @@ var solarSshApp = function(sshUrlHelper, options) {
     terminal.write("Requesting SolarNode to stop remote SSH session... ");
     return executeWithPreSignedAuthorization("GET", url, auth)
       .on("load", handleStopSession)
-      .on("error", function(xhr) {
+      .on("error", function (xhr) {
         console.error("Failed to stop session: %s", xhr.responseText);
         reset();
       });
@@ -314,11 +313,11 @@ var solarSshApp = function(sshUrlHelper, options) {
       var auth = sshUrlHelper.viewStartRemoteSshInstructionAuthBuilder();
       var req = jsonRequest(url);
       req
-        .on("beforesend", function(request) {
+        .on("beforesend", function (request) {
           request.setRequestHeader("X-SN-Date", auth.requestDateHeaderValue);
           request.setRequestHeader("Authorization", auth.buildWithSavedKey());
         })
-        .on("load", function(json) {
+        .on("load", function (json) {
           if (!(json.success && json.data && json.data.state)) {
             console.error(
               "Failed to query StartRemoteSsh instruction %d: %s",
@@ -361,7 +360,7 @@ var solarSshApp = function(sshUrlHelper, options) {
             setTimeout(executeQuery, 10000);
           }
         })
-        .on("error", function(xhr) {
+        .on("error", function (xhr) {
           console.error(
             "Failed to query StartRemoteSsh instruction %d: %s",
             session.startInstructionId,
@@ -394,7 +393,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 
   function handleSshCredentials() {
     var dialog = select(sshCredentialsDialog);
-    var usernameInput = dialog.select("input[type=text]");
+    var usernameInput = dialog.select("input[name=user]");
     if (sshCredentialsDialog.returnValue === "login" && !dialogCancelled) {
       var username = usernameInput.property("value");
       var password = dialog.select("input[type=password]").property("value");
@@ -530,7 +529,7 @@ var solarSshApp = function(sshUrlHelper, options) {
    */
   function start() {
     var opts = {
-      tabStopWidth: 4
+      tabStopWidth: 4,
     };
     if (termSettings.cols > 0 && termSettings.lines > 0) {
       opts.cols = termSettings.cols;
@@ -595,7 +594,7 @@ var solarSshApp = function(sshUrlHelper, options) {
 
       changeNodeId: { value: changeNodeId },
       start: { value: start },
-      stop: { value: stop }
+      stop: { value: stop },
     });
   }
 
@@ -609,10 +608,10 @@ function setupUI(env) {
 function setupNodeIdChange(app) {
   // allow the node ID to be edited, JS-8
   select("#node-id")
-    .on("focus", function() {
+    .on("focus", function () {
       this.dataset.oldNodeId = this.textContent;
     })
-    .on("blur", function() {
+    .on("blur", function () {
       var currValue = Number(this.textContent),
         oldNodeId = Number(this.dataset.oldNodeId);
       if (currValue && currValue !== oldNodeId) {
@@ -647,7 +646,7 @@ export default function startApp() {
 
   setupNodeIdChange(app);
 
-  window.onbeforeunload = function() {
+  window.onbeforeunload = function () {
     app.stop();
   };
 
