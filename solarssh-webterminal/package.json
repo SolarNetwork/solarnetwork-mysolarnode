@@ -1,6 +1,6 @@
 {
   "name": "solarssh-webterminal",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "SolarSSH Web Terminal",
   "keywords": [
     "solarnetwork",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "d3-request": "^1.0.5",
-    "d3-selection": "^1.1.0",
+    "d3-selection": "^3.0.0",
     "dialog-polyfill": "^0.5.0",
     "solarnetwork-api-core": "^0.20.0",
     "solarnetwork-api-ssh": "0.2",
