@@ -40,14 +40,14 @@ ext {
     ]
 }
 
-configurations.compile {
-	exclude group: 'commons-logging'
-	exclude group: 'net.sf.supercsv'
-	exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
-	exclude group: 'org.osgi'
-	exclude group: 'org.springframework', module: 'spring-messaging'
-	exclude group: 'org.springframework.security'
-	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
+configurations {
+	all*.exclude group: 'commons-logging'
+	all*.exclude group: 'net.sf.supercsv'
+	all*.exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
+	all*.exclude group: 'org.osgi'
+	all*.exclude group: 'org.springframework', module: 'spring-messaging'
+	all*.exclude group: 'org.springframework.security'
+	all*.exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
 }
 
 dependencies {
@@ -84,7 +84,7 @@ dependencies {
 	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.16+'
 	
     // HTTP
-    compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
+    implementation 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
     
     // Testing
 	// Testing
