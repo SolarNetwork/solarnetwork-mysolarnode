@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +54,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.solarnetwork.codec.JsonUtils;
-import net.solarnetwork.domain.GeneralDatumMetadata;
+import net.solarnetwork.domain.datum.GeneralDatumMetadata;
+import net.solarnetwork.service.PingTest;
+import net.solarnetwork.service.PingTestResult;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.SshSessionDao;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
@@ -68,9 +71,9 @@ import net.solarnetwork.solarssh.service.SolarSshService;
  * Default implementation of {@link SolarSshService}.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
-public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
+public class DefaultSolarSshService implements SolarSshService, SshSessionDao, PingTest {
 
   private static final Logger log = LoggerFactory.getLogger(DefaultSolarSshService.class);
 
@@ -101,6 +104,41 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao {
   public void init() {
     log.info("SolarSshService configured as host {}:{} using local ports {}:{}", host, port,
         minPort, maxPort);
+  }
+
+  @Override
+  public String getPingTestId() {
+    return "net.solarnetwork.solarssh.impl.DefaultSolarSshService";
+  }
+
+  @Override
+  public long getPingTestMaximumExecutionMilliseconds() {
+    return 1000;
+  }
+
+  @Override
+  public String getPingTestName() {
+    return "SolarSSH Service";
+  }
+
+  @Override
+  public Result performPingTest() throws Exception {
+    Map<String, Object> properties = new LinkedHashMap<>(8);
+    StringBuilder msg = new StringBuilder();
+    msg.append(host).append(":").append(port).append(" listening.");
+    int sessionCount = 0;
+    int activeCount = 0;
+    for (SshSession session : sessionMap.values()) {
+      sessionCount++;
+      if (session.isEstablished()) {
+        activeCount++;
+      }
+    }
+    properties.put("sessionCount", sessionCount);
+    properties.put("activeSessionCount", activeCount);
+    msg.append(" ").append(sessionCount).append(" sessions (").append(activeCount)
+        .append(" active).");
+    return new PingTestResult(true, msg.toString(), properties);
   }
 
   @Override

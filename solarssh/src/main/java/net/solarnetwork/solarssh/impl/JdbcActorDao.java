@@ -25,14 +25,13 @@ package net.solarnetwork.solarssh.impl;
 import static java.lang.System.currentTimeMillis;
 import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
 import static net.solarnetwork.util.StringUtils.delimitedStringToMap;
-import static net.solarnetwork.web.security.AuthorizationV2Builder.httpDate;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.Date;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -45,16 +44,16 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 
+import net.solarnetwork.security.Snws2AuthorizationBuilder;
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.Actor;
 import net.solarnetwork.solarssh.domain.SnTokenDetails;
-import net.solarnetwork.web.security.AuthorizationV2Builder;
 
 /**
  * JDBC implementation of {@link ActorDao}.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class JdbcActorDao implements ActorDao {
 
@@ -122,12 +121,12 @@ public class JdbcActorDao implements ActorDao {
 
       @Override
       public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
-        final Date now = new Date();
-        final AuthorizationV2Builder builder = new AuthorizationV2Builder(tokenId).date(now)
-            .header("X-SN-Date", httpDate(now)).host(snHost).path(snPath);
+        final Instant now = Instant.now();
+        final Snws2AuthorizationBuilder builder = new Snws2AuthorizationBuilder(tokenId)
+            .useSnDate(true).date(now).host(snHost).path(snPath);
         final String auth = builder.build(tokenSecret);
         final Map<String, String> authTokens = delimitedStringToMap(auth, ",", "=");
-        final Timestamp ts = Timestamp.from(now.toInstant());
+        final Timestamp ts = Timestamp.from(now);
 
         PreparedStatement stmt = con.prepareStatement(authenticateCall, ResultSet.TYPE_FORWARD_ONLY,
             ResultSet.CONCUR_READ_ONLY);

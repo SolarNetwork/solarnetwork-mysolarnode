@@ -28,7 +28,7 @@ import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC
 import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC_STOP_REMOTE_SSH;
 
 import java.io.IOException;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 
 import org.apache.sshd.common.RuntimeSshException;
@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
+import net.solarnetwork.security.Snws2AuthorizationBuilder;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.Actor;
@@ -49,13 +50,12 @@ import net.solarnetwork.solarssh.domain.SolarNodeInstructionState;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.web.security.AuthorizationV2Builder;
 
 /**
  * {@link PasswordAuthenticator} for direct SolarSSH connections.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
 
@@ -113,14 +113,15 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
     Actor actor = actorDao.getAuthenticatedActor(nodeId, tokenId, password);
     if (actor != null) {
       // node + token checks out; create new node SSH session now
-      Date now = new Date();
-      AuthorizationV2Builder authBuilder = new AuthorizationV2Builder(tokenId)
+      Instant now = Instant.now();
+      Snws2AuthorizationBuilder authBuilder = new Snws2AuthorizationBuilder(tokenId)
           .saveSigningKey(password).date(now).host(snHost)
           .path("/solaruser/api/v1/sec/instr/viewPending")
           .queryParams(singletonMap("nodeId", nodeId.toString()));
       Map<String, String> instructionParams = null;
       try {
-        sshSession = solarSshService.createNewSession(nodeId, now.getTime(), authBuilder.build());
+        sshSession = solarSshService.createNewSession(nodeId, now.toEpochMilli(),
+            authBuilder.build());
         sshSession.setDirectServerSession(session);
         sshSession.setTokenSecret(password);
         sshSession.setEstablished(true);
@@ -133,12 +134,12 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
         // CHECKSTYLE ON: LineLength
         instructionParams.put("nodeId", nodeId.toString());
         instructionParams.put("topic", INSTRUCTION_TOPIC_START_REMOTE_SSH);
-        now = new Date();
-        authBuilder.reset().method(HttpMethod.POST).date(now).host(snHost).method(HttpMethod.POST)
+        now = Instant.now();
+        authBuilder.reset().method(HttpMethod.POST.toString()).date(now).host(snHost)
             .path("/solaruser/api/v1/sec/instr/add")
             .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
             .queryParams(instructionParams);
-        sshSession = solarSshService.startSession(sshSession.getId(), now.getTime(),
+        sshSession = solarSshService.startSession(sshSession.getId(), now.toEpochMilli(),
             authBuilder.build());
         return waitForNodeInstructionToComplete(sshSession.getId(), nodeId, tokenId,
             INSTRUCTION_TOPIC_START_REMOTE_SSH, sshSession.getStartInstructionId(), authBuilder);
@@ -149,13 +150,14 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
         // if we started the node remote SSH, stop it now
         if (sshSession != null) {
           instructionParams.put("topic", INSTRUCTION_TOPIC_STOP_REMOTE_SSH);
-          now = new Date();
-          authBuilder.reset().method(HttpMethod.POST).date(now).host(snHost).method(HttpMethod.POST)
+          now = Instant.now();
+          authBuilder.reset().method(HttpMethod.POST.toString()).date(now).host(snHost)
               .path("/solaruser/api/v1/sec/instr/add")
               .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
               .queryParams(instructionParams);
           try {
-            solarSshService.stopSession(sshSession.getId(), now.getTime(), authBuilder.build());
+            solarSshService.stopSession(sshSession.getId(), now.toEpochMilli(),
+                authBuilder.build());
           } catch (Exception e2) {
             // ignore
           }
@@ -169,14 +171,14 @@ public class SolarSshPasswordAuthenticator implements PasswordAuthenticator {
   }
 
   private boolean waitForNodeInstructionToComplete(String sessionId, Long nodeId, String tokenId,
-      String topic, Long instructionId, AuthorizationV2Builder authBuilder) throws IOException {
+      String topic, Long instructionId, Snws2AuthorizationBuilder authBuilder) throws IOException {
     final long expire = System.currentTimeMillis() + (1000L * this.maxNodeInstructionWaitSecs);
     while (System.currentTimeMillis() < expire) {
-      Date now = new Date();
+      Instant now = Instant.now();
       authBuilder.reset().date(now).host(snHost).path("/solaruser/api/v1/sec/instr/view")
           .queryParams(singletonMap("id", instructionId.toString()));
       SolarNodeInstructionState state = solarSshService.getInstructionState(instructionId,
-          now.getTime(), authBuilder.build());
+          now.toEpochMilli(), authBuilder.build());
       if (state == SolarNodeInstructionState.Completed) {
         log.info("Token {} {} instruction {} completed", tokenId, topic, instructionId);
         while (System.currentTimeMillis() < expire) {

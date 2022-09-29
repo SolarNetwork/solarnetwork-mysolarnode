@@ -22,13 +22,20 @@
 
 package net.solarnetwork.solarssh.web.config;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import net.solarnetwork.service.PingTest;
 import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
+import net.solarnetwork.web.support.PingController;
 
 /**
  * WebMVC configuration.
@@ -42,6 +49,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
   @Autowired
   private SolarSshHttpProxyController httpProxyController;
 
+  @Autowired(required = false)
+  private List<PingTest> pingTests;
+
   @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs:60000}")
   public void cleanupExpiredSessions() {
     httpProxyController.cleanupExpiredSessions();
@@ -49,8 +59,22 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
   @Override
   public void addCorsMappings(CorsRegistry registry) {
-    registry.addMapping("/**").allowCredentials(false).allowedOrigins("*").allowedHeaders("*")
-        .allowedMethods("*");
+    // @formatter:off
+    registry.addMapping("/**")
+      .allowCredentials(true)
+      .allowedOriginPatterns(CorsConfiguration.ALL)
+      .maxAge(TimeUnit.HOURS.toSeconds(24))
+      .allowedMethods("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+      .allowedHeaders("Authorization", "Content-MD5", "Content-Type", "Digest", "X-SN-Date")
+      ;
+    // @formatter:on
+  }
+
+  @Bean
+  public PingController pingController() {
+    PingController controller = new PingController();
+    controller.setTests(pingTests);
+    return controller;
   }
 
 }

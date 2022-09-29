@@ -27,7 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.solarnetwork.domain.GeneralDatumMetadata;
+import net.solarnetwork.domain.datum.GeneralDatumMetadata;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.domain.SshSession;
 
@@ -35,7 +35,7 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * API for SolarNet operations.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public interface SolarNetClient {
 
