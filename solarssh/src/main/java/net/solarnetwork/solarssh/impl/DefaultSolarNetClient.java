@@ -48,18 +48,18 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.solarnetwork.domain.GeneralDatumMetadata;
+import net.solarnetwork.domain.datum.GeneralDatumMetadata;
+import net.solarnetwork.service.support.HttpClientSupport;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.service.SolarNetClient;
-import net.solarnetwork.support.HttpClientSupport;
 import net.solarnetwork.web.security.WebConstants;
 
 /**
  * Default implementation of {@link SolarNetClient}.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class DefaultSolarNetClient extends HttpClientSupport implements SolarNetClient {
 

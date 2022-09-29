@@ -30,7 +30,7 @@ import static net.solarnetwork.solarssh.service.SolarNetClient.INSTRUCTION_TOPIC
 
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 
 import org.apache.sshd.common.io.IoSession;
@@ -42,12 +42,12 @@ import org.apache.sshd.server.channel.ChannelSessionFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 
+import net.solarnetwork.security.Snws2AuthorizationBuilder;
 import net.solarnetwork.solarssh.dao.ActorDao;
 import net.solarnetwork.solarssh.domain.DirectSshUsername;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.service.SolarNetClient;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.web.security.AuthorizationV2Builder;
 
 /**
  * Default SSH server service.
@@ -219,14 +219,16 @@ public class DefaultSolarSshdDirectServer extends AbstractSshdServer {
     instructionParams.put("nodeId", directUsername.getNodeId().toString());
     instructionParams.put("topic", INSTRUCTION_TOPIC_STOP_REMOTE_SSH);
 
-    Date now = new Date();
-    AuthorizationV2Builder authBuilder = new AuthorizationV2Builder(directUsername.getTokenId())
-        .saveSigningKey(sshSession.getTokenSecret()).date(now).host(getSnHost())
-        .method(HttpMethod.POST).path("/solaruser/api/v1/sec/instr/add")
-        .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE).queryParams(instructionParams);
+    Instant now = Instant.now();
+    Snws2AuthorizationBuilder authBuilder = new Snws2AuthorizationBuilder(
+        directUsername.getTokenId()).saveSigningKey(sshSession.getTokenSecret()).date(now)
+            .host(getSnHost()).method(HttpMethod.POST.toString())
+            .path("/solaruser/api/v1/sec/instr/add")
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+            .queryParams(instructionParams);
 
     try {
-      sshSession = solarSshService.stopSession(sshSession.getId(), now.getTime(),
+      sshSession = solarSshService.stopSession(sshSession.getId(), now.toEpochMilli(),
           authBuilder.build());
       log.info("Issued {} instruction for token {} node {} with parameters {}",
           INSTRUCTION_TOPIC_STOP_REMOTE_SSH, directUsername.getTokenId(),

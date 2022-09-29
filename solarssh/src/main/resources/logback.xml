@@ -13,7 +13,7 @@
     <immediateFlush>true</immediateFlush>
 
     <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-      <fileNamePattern>${solarssh.logdir}/solarssh-audit.%i.log.zip</fileNamePattern>
+      <fileNamePattern>${solarssh.logdir:-.}/solarssh-audit.%i.log.zip</fileNamePattern>
       <minIndex>1</minIndex>
       <maxIndex>21</maxIndex>
     </rollingPolicy>
@@ -32,7 +32,7 @@
     <immediateFlush>true</immediateFlush>
 
     <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-      <fileNamePattern>${solarssh.logdir}/solarssh.%i.log.zip</fileNamePattern>
+      <fileNamePattern>${solarssh.logdir:-.}/solarssh.%i.log.zip</fileNamePattern>
       <minIndex>1</minIndex>
       <maxIndex>21</maxIndex>
     </rollingPolicy>
