@@ -65,7 +65,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         .allowedOriginPatterns(CorsConfiguration.ALL)
         .maxAge(TimeUnit.HOURS.toSeconds(24))
         .allowedMethods("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-        .allowedHeaders("Authorization", "Content-MD5", "Content-Type", "Digest", "X-SN-Date")
+        .allowedHeaders("Authorization", "Content-MD5", "Content-Type", "Digest", "X-SN-Date", "X-SN-PresignedAuthorization")
         ;
     // @formatter:on
   }
