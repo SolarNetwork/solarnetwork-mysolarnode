@@ -32,7 +32,6 @@ import java.util.Map;
 
 import javax.cache.Cache;
 
-import org.apache.sshd.common.FactoryManager;
 import org.apache.sshd.common.channel.Channel;
 import org.apache.sshd.common.channel.ChannelListener;
 import org.apache.sshd.common.config.keys.FilePasswordProvider;
@@ -40,6 +39,7 @@ import org.apache.sshd.common.io.IoSession;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.session.SessionListener;
+import org.apache.sshd.core.CoreModuleProperties;
 import org.apache.sshd.server.SshServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * Abstract base class for SolarSSH SSHD server instances.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public abstract class AbstractSshdServer implements SessionListener, ChannelListener {
 
@@ -114,7 +114,7 @@ public abstract class AbstractSshdServer implements SessionListener, ChannelList
     s.addSessionListener(this);
     s.addChannelListener(this);
 
-    s.getProperties().put(FactoryManager.AUTH_TIMEOUT, authTimeoutSecs * 1000L);
+    s.getProperties().put(CoreModuleProperties.AUTH_TIMEOUT.getName(), authTimeoutSecs * 1000L);
 
     if (bruteForceDenyList != null) {
       BruteForceDenyEventListener listener = new BruteForceDenyEventListener(bruteForceDenyList);
