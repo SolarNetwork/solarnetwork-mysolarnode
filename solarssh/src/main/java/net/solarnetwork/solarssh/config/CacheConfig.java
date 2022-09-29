@@ -83,7 +83,7 @@ public class CacheConfig {
    * @return the manager.
    */
   @Bean
-  public CacheManager cacheManager() {
+  public CacheManager appCacheManager() {
     CachingProvider cachingProvider = Caching.getCachingProvider();
     if (cachingProvider instanceof EhcacheCachingProvider) {
       DefaultConfiguration configuration = new DefaultConfiguration(
