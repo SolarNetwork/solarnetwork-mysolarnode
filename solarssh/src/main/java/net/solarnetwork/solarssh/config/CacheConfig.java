@@ -77,8 +77,13 @@ public class CacheConfig {
   @Value("${app.cache.persistence.path}")
   private Path persistencePath;
 
+  /**
+   * Get the cache manager.
+   * 
+   * @return the manager.
+   */
   @Bean
-  public CacheManager jCacheManager() {
+  public CacheManager cacheManager() {
     CachingProvider cachingProvider = Caching.getCachingProvider();
     if (cachingProvider instanceof EhcacheCachingProvider) {
       DefaultConfiguration configuration = new DefaultConfiguration(

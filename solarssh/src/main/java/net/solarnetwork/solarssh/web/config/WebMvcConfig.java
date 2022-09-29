@@ -61,15 +61,20 @@ public class WebMvcConfig implements WebMvcConfigurer {
   public void addCorsMappings(CorsRegistry registry) {
     // @formatter:off
     registry.addMapping("/**")
-      .allowCredentials(true)
-      .allowedOriginPatterns(CorsConfiguration.ALL)
-      .maxAge(TimeUnit.HOURS.toSeconds(24))
-      .allowedMethods("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-      .allowedHeaders("Authorization", "Content-MD5", "Content-Type", "Digest", "X-SN-Date")
-      ;
+        .allowCredentials(true)
+        .allowedOriginPatterns(CorsConfiguration.ALL)
+        .maxAge(TimeUnit.HOURS.toSeconds(24))
+        .allowedMethods("GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
+        .allowedHeaders("Authorization", "Content-MD5", "Content-Type", "Digest", "X-SN-Date")
+        ;
     // @formatter:on
   }
 
+  /**
+   * Get the PingTest controller.
+   * 
+   * @return the controller
+   */
   @Bean
   public PingController pingController() {
     PingController controller = new PingController();
