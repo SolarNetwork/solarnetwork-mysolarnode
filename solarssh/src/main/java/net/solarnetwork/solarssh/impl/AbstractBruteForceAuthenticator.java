@@ -96,11 +96,11 @@ public abstract class AbstractBruteForceAuthenticator {
         if (attempts >= maxFails) {
           session.close(false);
           log.info("{} authentication attempt [{}] blocked after {} attempts", src, username,
-              count);
+              attempts);
           auditBruteForceEvent(session, username, src, attempts, AUDIT_EVENT_IP_TRACKING_BLOCKED);
           throw new RuntimeSshException("Blocked.");
         } else {
-          log.info("{} authentication attempt [{}] failed: attempt {}", src, username, count);
+          log.info("{} authentication attempt [{}] failed: attempt {}", src, username, attempts);
           if (currCount == null) {
             denyList.putIfAbsent(src, count);
           } else {
