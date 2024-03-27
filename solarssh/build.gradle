@@ -1,15 +1,15 @@
 plugins {
-    id 'java'
     id 'war'
     id 'checkstyle'
-    id 'eclipse-wtp'
-    id 'org.springframework.boot' version '2.3.2.RELEASE'
+    id 'eclipse'
+	id 'org.springframework.boot' version '2.7.4'
 }
 
-apply plugin: 'checkstyle'
 apply plugin: 'war'
+apply plugin: 'checkstyle'
 apply plugin: 'io.spring.dependency-management'
 
+version = "${version}"
 description = 'SolarSSH Server'
 archivesBaseName = 'solarssh'
 
@@ -19,8 +19,8 @@ dependencyManagement {
 	}
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 17
+targetCompatibility = 17
 
 repositories {
     jcenter()
@@ -31,13 +31,8 @@ repositories {
 ext {
 	bouncyCastleVersion 	= '1.57'
 	checkstyleVersion 		= '8.34'
-    jacksonVersion 			= '2.11.1'
-    javaxAnnotationVersion 	= '1.3.2'
     myBatisStarterVersion 	= '2.1.3'
-    postgresJdbcVersion 	= '42.2.14'
-    slf4jVersion 			= '1.7.30'
-	springVersion 			= '5.2.8.RELEASE'
-    sshdVersion				= '2.5.1'
+    sshdVersion				= '2.9.1'
 
     libraries = [
         // Test dependencies.
@@ -47,41 +42,35 @@ ext {
     ]
 }
 
-configurations.compile {
-	exclude group: 'commons-logging'
-	exclude group: 'net.sf.supercsv'
-	exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
-	exclude group: 'org.osgi'
-	exclude group: 'org.springframework', module: 'spring-messaging'
-	exclude group: 'org.springframework.security'
-	exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
+configurations {
+	all*.exclude group: 'commons-logging'
+	all*.exclude group: 'net.sf.supercsv'
+	all*.exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
+	all*.exclude group: 'org.osgi'
+	all*.exclude group: 'org.springframework', module: 'spring-messaging'
+	all*.exclude group: 'org.springframework.security'
+	all*.exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
+	all*.exclude group: 'log4j', module: 'log4j'
+	all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
 }
 
 dependencies {
 	// Spring
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf';
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-	// allow WAR to be run from command line OR deployed in Tomcat
-	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
-
 	// JSON
-	implementation "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
-	implementation "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-	implementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
+	implementation "com.fasterxml.jackson.core:jackson-annotations"
+	implementation "com.fasterxml.jackson.core:jackson-core"
+	implementation "com.fasterxml.jackson.core:jackson-databind"
+	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda"
 	
 	// DB
-	implementation "org.postgresql:postgresql:${postgresJdbcVersion}"
+	implementation "org.postgresql:postgresql"
 
-	// Logging
-	implementation "org.slf4j:jul-to-slf4j:${slf4jVersion}"
-	implementation "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
-	implementation "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
-	implementation "org.slf4j:slf4j-api:${slf4jVersion}"
-	
 	// SSH
     implementation "org.apache.sshd:sshd-mina:${sshdVersion}"
     implementation "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
@@ -89,12 +78,12 @@ dependencies {
     implementation 'net.i2p.crypto:eddsa:0.3.0'
 
 	// SolarNetwork
-	implementation 'net.solarnetwork.common:net.solarnetwork.common:1.74+'
-	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:1.17+'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common:2.10+'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:2.3+'
 	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.16+'
 	
     // HTTP
-    compile 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
+    implementation 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
     
     // Testing
 	// Testing
@@ -108,17 +97,7 @@ jar {
     baseName = 'solarssh'
     version =  version
     manifest {
-        attributes 'Implementation-Title': 'SolarSSH App',
-                   'Implementation-Version': version
-    }
-}
-
-war {
-    baseName = 'solarssh'
-    version =  version
-    manifest {
-        attributes 'Implementation-Title': 'SolarSSH App',
-                   'Implementation-Version': version
+        attributes 'Implementation-Version': version
     }
 }
 
@@ -156,8 +135,8 @@ jar.manifest {
 javadoc.options {
     encoding = 'UTF-8'
     use = true
-    links 'https://docs.oracle.com/javase/8/docs/api/'
-    source = "8"
+    links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
+    source = "17"
 }
 
 eclipse {
@@ -165,12 +144,8 @@ eclipse {
 		natures 'net.sf.eclipsecs.core.CheckstyleNature'
 		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
 	}
-	wtp {
-		facet {
-			facet name: 'jst.java', version: 1.8
-			facet name: 'jst.web', version: '3.1'
-			facet name: 'jst.jaxrs', version: '2.0'
-		}
+	jdt {
+		javaRuntimeName 'JavaSE-17'
 	}
 }
 

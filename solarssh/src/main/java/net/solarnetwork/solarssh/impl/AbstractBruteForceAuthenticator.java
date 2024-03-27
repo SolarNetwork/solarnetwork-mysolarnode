@@ -42,7 +42,7 @@ import net.solarnetwork.solarssh.Globals;
  * Base class for brute force mitigation authenticators.
  * 
  * @author matt
- * @version 1.2
+ * @version 1.3
  */
 public abstract class AbstractBruteForceAuthenticator {
 
@@ -85,22 +85,27 @@ public abstract class AbstractBruteForceAuthenticator {
     if (session.getRemoteAddress() instanceof InetSocketAddress) {
       InetAddress src = ((InetSocketAddress) session.getRemoteAddress()).getAddress();
       if (!src.isLoopbackAddress()) {
-        Byte count = denyList.get(src);
-        if (count == null) {
+        final Byte currCount = denyList.get(src);
+        byte count = 0;
+        if (currCount == null) {
           count = (byte) 1;
-        } else if (count.byteValue() != (byte) 0xFF) {
-          count = (byte) ((count.byteValue() & 0xFF) + 1);
+        } else if (currCount.byteValue() != (byte) 0xFF) {
+          count = (byte) ((currCount.byteValue() & 0xFF) + 1);
         }
-        denyList.put(src, count);
         final int attempts = Byte.toUnsignedInt(count);
         if (attempts >= maxFails) {
           session.close(false);
           log.info("{} authentication attempt [{}] blocked after {} attempts", src, username,
-              count);
+              attempts);
           auditBruteForceEvent(session, username, src, attempts, AUDIT_EVENT_IP_TRACKING_BLOCKED);
           throw new RuntimeSshException("Blocked.");
         } else {
-          log.info("{} authentication attempt [{}] failed: attempt {}", src, username, count);
+          log.info("{} authentication attempt [{}] failed: attempt {}", src, username, attempts);
+          if (currCount == null) {
+            denyList.putIfAbsent(src, count);
+          } else {
+            denyList.replace(src, currCount, count);
+          }
           auditBruteForceEvent(session, username, src, attempts,
               AUDIT_EVENT_IP_TRACKING_FAILED_ATTEMPT);
         }

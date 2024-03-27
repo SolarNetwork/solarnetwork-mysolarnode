@@ -18,20 +18,26 @@
 package net.solarnetwork.solarssh.config;
 
 import java.net.InetAddress;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import javax.cache.Cache;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
 import javax.cache.configuration.MutableConfiguration;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
+import javax.cache.spi.CachingProvider;
 
 import org.ehcache.config.CacheConfiguration;
 import org.ehcache.config.builders.CacheConfigurationBuilder;
 import org.ehcache.config.builders.ExpiryPolicyBuilder;
 import org.ehcache.config.builders.ResourcePoolsBuilder;
 import org.ehcache.config.units.MemoryUnit;
+import org.ehcache.core.config.DefaultConfiguration;
+import org.ehcache.impl.config.persistence.DefaultPersistenceConfiguration;
 import org.ehcache.jsr107.Eh107Configuration;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.ehcache.jsr107.EhcacheCachingProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.EnableCaching;
@@ -56,9 +62,6 @@ public class CacheConfig {
    */
   public static final String ACTOR_CACHE_NAME = "Actor";
 
-  @Autowired(required = false)
-  private javax.cache.CacheManager cacheManager;
-
   @Value("${cache.actor.ttl:900}")
   private int actorCacheSeconds = 900;
 
@@ -71,6 +74,28 @@ public class CacheConfig {
   @Value("${cache.bruteForceDeny.maxDiskMb:100}")
   private int bruteForceDenyCacheMaxDiskMb = 100;
 
+  @Value("${app.cache.persistence.path}")
+  private Path persistencePath;
+
+  /**
+   * Get the cache manager.
+   * 
+   * @return the manager.
+   */
+  @Bean
+  public CacheManager appCacheManager() {
+    CachingProvider cachingProvider = Caching.getCachingProvider();
+    if (cachingProvider instanceof EhcacheCachingProvider) {
+      DefaultConfiguration configuration = new DefaultConfiguration(
+          cachingProvider.getDefaultClassLoader(),
+          new DefaultPersistenceConfiguration(persistencePath.toFile()));
+      return ((EhcacheCachingProvider) cachingProvider)
+          .getCacheManager(cachingProvider.getDefaultURI(), configuration);
+    } else {
+      return cachingProvider.getCacheManager();
+    }
+  }
+
   /**
    * Get the actor cache.
    * 
@@ -79,10 +104,7 @@ public class CacheConfig {
   @Bean
   @Qualifier("actor")
   @Profile("!default")
-  public Cache<String, Actor> actorCache() {
-    if (cacheManager == null) {
-      return null;
-    }
+  public Cache<String, Actor> actorCache(CacheManager cacheManager) {
     return cacheManager.createCache(ACTOR_CACHE_NAME, actorCacheConfiguration());
   }
 
@@ -103,7 +125,7 @@ public class CacheConfig {
   @Bean
   @Qualifier("brute-force-deny-list")
   @Profile("!default")
-  public Cache<InetAddress, Byte> bruteForceDenyListCache() {
+  public Cache<InetAddress, Byte> bruteForceDenyListCache(CacheManager cacheManager) {
     if (cacheManager == null) {
       return null;
     }
