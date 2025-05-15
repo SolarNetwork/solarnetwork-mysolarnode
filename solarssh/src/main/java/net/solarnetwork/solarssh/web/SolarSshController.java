@@ -34,7 +34,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.cache.Cache;
-import javax.servlet.http.HttpServletRequest;
 
 import org.apache.sshd.common.RuntimeSshException;
 import org.slf4j.Logger;
@@ -51,18 +50,19 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.Globals;
 import net.solarnetwork.solarssh.domain.SshSession;
 import net.solarnetwork.solarssh.service.SolarSshService;
-import net.solarnetwork.web.domain.Response;
-import net.solarnetwork.web.security.WebConstants;
+import net.solarnetwork.web.jakarta.domain.Response;
+import net.solarnetwork.web.jakarta.security.WebConstants;
 
 /**
  * Web controller for connection commands.
  * 
  * @author matt
- * @version 1.2
+ * @version 1.3
  */
 @RestController
 @RequestMapping("/api/v1/ssh")
@@ -179,9 +179,9 @@ public class SolarSshController {
    * @return the response
    */
   @ExceptionHandler(AuthorizationException.class)
-  public ResponseEntity<Response<Object>> ioException(AuthorizationException e) {
+  public ResponseEntity<Response<Object>> authException(AuthorizationException e) {
     return new ResponseEntity<Response<Object>>(
-        new Response<Object>(Boolean.FALSE, "570", e.getMessage(), null), HttpStatus.FORBIDDEN);
+        new Response<Object>(Boolean.FALSE, "571", e.getMessage(), null), HttpStatus.FORBIDDEN);
   }
 
   private static final Pattern SNWS_V2_KEY_PATTERN = Pattern.compile("Credential=([^,]+)(?:,|$)");

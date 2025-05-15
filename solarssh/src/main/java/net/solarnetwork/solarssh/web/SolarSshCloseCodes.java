@@ -22,7 +22,7 @@
 
 package net.solarnetwork.solarssh.web;
 
-import javax.websocket.CloseReason;
+import jakarta.websocket.CloseReason;
 
 /**
  * Application-specific websocket close codes.

@@ -56,7 +56,7 @@ import net.solarnetwork.solarssh.domain.SshSession;
  * Factory for dynamically-allocated direct-tcpip ports.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class DynamicDirectTcpipFactory extends TcpipFactory {
 
@@ -181,6 +181,16 @@ public class DynamicDirectTcpipFactory extends TcpipFactory {
     @Override
     public int available() {
       return delegate.available();
+    }
+
+    /**
+     * @param from
+     * @return
+     * @see org.apache.sshd.common.util.buffer.Buffer#getBytesConsumed(int)
+     */
+    @Override
+    public byte[] getBytesConsumed(int from) {
+      return delegate.getBytesConsumed(from);
     }
 
     @Override

@@ -29,15 +29,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.http.Header;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.mitre.dsmiley.httpproxy.ProxyServlet;
@@ -45,13 +38,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import net.solarnetwork.solarssh.domain.SshSession;
 
 /**
  * Extension of {@link ProxyServlet} to associate with a specific {@link SshSession}.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class SshSessionProxyServlet extends ProxyServlet {
 
@@ -115,10 +113,9 @@ public class SshSessionProxyServlet extends ProxyServlet {
   }
 
   @Override
-  protected HttpClient createHttpClient(RequestConfig requestConfig) {
+  protected HttpClient buildHttpClient(HttpClientBuilder clientBuilder) {
     // @formatter:off
-    return HttpClientBuilder.create()
-        .setDefaultRequestConfig(requestConfig)
+    return clientBuilder
         .setDefaultHeaders(singletonList(new BasicHeader("X-Forwarded-Path", proxyPath)))
         .setConnectionTimeToLive(1, TimeUnit.MINUTES)
         .disableCookieManagement()
@@ -137,12 +134,10 @@ public class SshSessionProxyServlet extends ProxyServlet {
     }
     for (HttpCookie cookie : cookies) {
       Cookie responseCookie = new Cookie(cookie.getName(), cookie.getValue());
-      responseCookie.setComment(cookie.getComment());
       responseCookie.setMaxAge((int) cookie.getMaxAge());
       responseCookie.setPath(path);
       responseCookie.setHttpOnly(cookie.isHttpOnly());
       responseCookie.setSecure(cookie.getSecure());
-      responseCookie.setVersion(cookie.getVersion());
       LOG.debug("Remapped cookie {} path to {}", cookie, proxyPath);
       servletResponse.addCookie(responseCookie);
     }

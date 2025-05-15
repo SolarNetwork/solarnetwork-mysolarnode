@@ -26,22 +26,29 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.cbor.MappingJackson2CborHttpMessageConverter;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.solarnetwork.central.web.PingController;
 import net.solarnetwork.service.PingTest;
+import net.solarnetwork.solarssh.config.JsonConfig;
 import net.solarnetwork.solarssh.web.SolarSshHttpProxyController;
-import net.solarnetwork.web.support.PingController;
 
 /**
  * WebMVC configuration.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
@@ -49,8 +56,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
   @Autowired
   private SolarSshHttpProxyController httpProxyController;
 
-  @Autowired(required = false)
-  private List<PingTest> pingTests;
+  @Autowired
+  @Qualifier(JsonConfig.CBOR_MAPPER)
+  private ObjectMapper cborObjectMapper;
 
   @Scheduled(fixedDelayString = "${ssh.sessionProxyExpireCleanupJobMs:60000}")
   public void cleanupExpiredSessions() {
@@ -76,16 +84,24 @@ public class WebMvcConfig implements WebMvcConfigurer {
     // @formatter:on
   }
 
-  /**
-   * Get the PingTest controller.
-   * 
-   * @return the controller
-   */
-  @Bean
-  public PingController pingController() {
-    PingController controller = new PingController();
-    controller.setTests(pingTests);
-    return controller;
+  @Override
+  public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    // update CBOR with our standard ObjectMapper
+    for (HttpMessageConverter<?> c : converters) {
+      if (c instanceof MappingJackson2CborHttpMessageConverter cbor) {
+        cbor.setObjectMapper(cborObjectMapper);
+      }
+    }
+  }
+
+  @Controller
+  @RequestMapping("/ping")
+  static class SolarInPingController extends PingController {
+
+    public SolarInPingController(List<PingTest> tests) {
+      super(tests);
+    }
+
   }
 
 }

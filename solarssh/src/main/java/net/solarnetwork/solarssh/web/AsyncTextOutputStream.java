@@ -26,9 +26,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 
-import javax.websocket.CloseReason;
-import javax.websocket.RemoteEndpoint.Async;
-import javax.websocket.Session;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.RemoteEndpoint.Async;
+import jakarta.websocket.Session;
 
 /**
  * Write websocket text messages as an OutputStream.
