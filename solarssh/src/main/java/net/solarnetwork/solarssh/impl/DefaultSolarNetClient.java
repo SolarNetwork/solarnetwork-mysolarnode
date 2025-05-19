@@ -53,7 +53,7 @@ import net.solarnetwork.service.support.HttpClientSupport;
 import net.solarnetwork.solarssh.AuthorizationException;
 import net.solarnetwork.solarssh.domain.SolarNetInstruction;
 import net.solarnetwork.solarssh.service.SolarNetClient;
-import net.solarnetwork.web.security.WebConstants;
+import net.solarnetwork.web.jakarta.security.WebConstants;
 
 /**
  * Default implementation of {@link SolarNetClient}.

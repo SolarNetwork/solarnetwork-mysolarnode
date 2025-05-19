@@ -144,6 +144,13 @@ public class DefaultSolarSshdServer extends AbstractSshdServer implements SolarS
 
   @Override
   public void sessionException(Session session, Throwable t) {
+    String msg = t.getMessage();
+    if (msg.contains("SSH_MSG_CHANNEL_EOF")) {
+      // ignore this: org.apache.sshd.common.SshException: Write attempt on closing session: SSH_MSG_CHANNEL_EOF
+      // see https://github.com/apache/mina-sshd/issues/410
+      // although marked as fixed, still seeing
+      return;
+    }
     log.warn("Session {} exception", session.getUsername(), t);
     logSessionClosed(session, AUDIT_NODE_DISCONNECT, t);
   }

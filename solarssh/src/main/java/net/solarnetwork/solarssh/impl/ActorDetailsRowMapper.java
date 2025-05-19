@@ -29,7 +29,7 @@ import org.springframework.jdbc.core.RowMapper;
 
 import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
-import net.solarnetwork.central.support.JsonUtils;
+import net.solarnetwork.codec.JsonUtils;
 import net.solarnetwork.solarssh.domain.Actor;
 import net.solarnetwork.solarssh.domain.ActorDetails;
 
@@ -37,7 +37,7 @@ import net.solarnetwork.solarssh.domain.ActorDetails;
  * {@link RowMapper} for {@link ActorDetails}.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class ActorDetailsRowMapper implements RowMapper<Actor> {
 
@@ -112,8 +112,6 @@ public class ActorDetailsRowMapper implements RowMapper<Actor> {
     String policyJson = rs.getString(policyCol);
     SecurityPolicy policy = null;
     if (policyJson != null) {
-      // note we use .central.support.JsonUtils and not .util.JsonUtils here because
-      // we don't want the Joda module used when parsing the epoch timestamps
       policy = JsonUtils.getObjectFromJSON(policyJson, BasicSecurityPolicy.class);
     }
 

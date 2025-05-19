@@ -1,5 +1,9 @@
 # SolarSSH
 
+> :warning: This project has been moved to the
+> [SolarNetwork/solarssh-server](https://github.com/SolarNetwork/solarssh-server)
+> repo. No further changes will be made here.
+
 This project is a cloud-based server that enables accessing SolarNode devices
 via a SSH tunnel. It works with the [SolarNode System SSH][system.ssh] plugin to
 establish a SSH connection between the SolarNode and this SolarSSH server and

@@ -22,7 +22,7 @@
 
 package net.solarnetwork.solarssh.impl;
 
-import static java.lang.System.currentTimeMillis;
+import static java.time.Instant.now;
 import static net.solarnetwork.solarssh.Globals.DEFAULT_SN_HOST;
 import static net.solarnetwork.util.StringUtils.delimitedStringToMap;
 
@@ -53,7 +53,7 @@ import net.solarnetwork.solarssh.domain.SnTokenDetails;
  * JDBC implementation of {@link ActorDao}.
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class JdbcActorDao implements ActorDao {
 
@@ -135,7 +135,7 @@ public class JdbcActorDao implements ActorDao {
         stmt.setString(3, snHost);
         stmt.setString(4, snPath);
         stmt.setString(5, authTokens.get(SIGNATURE_TOKEN));
-        log.debug("Authenticating witH SQL: {} [{},{},{},{},{}]", authenticateCall, tokenId, ts,
+        log.debug("Authenticating with SQL: {} [{},{},{},{},{}]", authenticateCall, tokenId, ts,
             snHost, snPath, authTokens.get(SIGNATURE_TOKEN));
         return stmt;
       }
@@ -147,7 +147,7 @@ public class JdbcActorDao implements ActorDao {
 
     // verify not expired
     SnTokenDetails details = results.get(0);
-    if (details.getPolicy() != null && !details.getPolicy().isValidAt(currentTimeMillis())) {
+    if (details.getPolicy() != null && !details.getPolicy().isValidAt(now())) {
       return null;
     }
 

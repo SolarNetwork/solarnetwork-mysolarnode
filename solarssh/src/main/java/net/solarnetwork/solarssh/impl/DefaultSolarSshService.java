@@ -44,9 +44,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.client.channel.ChannelShell;
+import org.apache.sshd.client.config.hosts.HostConfigEntryResolver;
 import org.apache.sshd.client.session.ClientSession;
 import org.apache.sshd.common.future.CloseFuture;
 import org.apache.sshd.common.future.SshFutureListener;
+import org.apache.sshd.common.keyprovider.KeyIdentityProvider;
 import org.apache.sshd.common.session.Session;
 import org.apache.sshd.common.util.io.input.NoCloseInputStream;
 import org.apache.sshd.common.util.io.output.NoCloseOutputStream;
@@ -279,6 +281,8 @@ public class DefaultSolarSshService implements SolarSshService, SshSessionDao, P
   private ClientSession createClient(SshSession sess, SshCredentials credentials,
       SshTerminalSettings settings, InputStream in, OutputStream out) throws IOException {
     SshClient client = SshClient.setUpDefaultClient();
+    client.setHostConfigEntryResolver(HostConfigEntryResolver.EMPTY); // no need
+    client.setKeyIdentityProvider(KeyIdentityProvider.EMPTY_KEYS_PROVIDER); // no need
     client.start();
 
     ClientSession session = client

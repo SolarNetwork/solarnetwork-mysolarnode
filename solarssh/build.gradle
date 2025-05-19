@@ -2,16 +2,12 @@ plugins {
     id 'war'
     id 'checkstyle'
     id 'eclipse'
-	id 'org.springframework.boot' version '2.7.4'
+	id 'org.springframework.boot' version '3.4.5'
 }
 
 apply plugin: 'war'
 apply plugin: 'checkstyle'
 apply plugin: 'io.spring.dependency-management'
-
-version = "${version}"
-description = 'SolarSSH Server'
-archivesBaseName = 'solarssh'
 
 dependencyManagement {
 	imports {
@@ -19,42 +15,58 @@ dependencyManagement {
 	}
 }
 
-sourceCompatibility = 17
-targetCompatibility = 17
+description = 'SolarSSH Server'
+version = "${version}"
+
+base {
+	archivesName = 'solarssh'
+}
+
+group = "net.solarnetwork.central"
+
+java {
+	toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 repositories {
-    jcenter()
     mavenLocal()
-    maven { url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/" }
+    mavenCentral()
 }
 
 ext {
-	bouncyCastleVersion 	= '1.57'
-	checkstyleVersion 		= '8.34'
-    myBatisStarterVersion 	= '2.1.3'
-    sshdVersion				= '2.9.1'
+	bouncyCastleVersion 	= '1.80'
+	checkstyleVersion 		= '10.23.1'
+    sshdVersion				= '2.15.0'
 
     libraries = [
         // Test dependencies.
-        hamcrest: 'org.hamcrest:hamcrest-library:1.3',
-        junit: 'junit:junit:4.12',
-        mockito: 'org.mockito:mockito-core:2.25.1'
+        mockito: 'org.mockito:mockito-core',
+        mockitoJupiter: 'org.mockito:mockito-junit-jupiter'
     ]
 }
 
 configurations {
 	all*.exclude group: 'commons-logging'
+	all*.exclude group: 'io.netty'
+	all*.exclude group: 'log4j', module: 'log4j'
 	all*.exclude group: 'net.sf.supercsv'
+	all*.exclude group: 'net.solarnetwork.common', module: 'net.solarnetwork.common.mqtt'
 	all*.exclude group: 'org.apache.tomcat', module: 'tomcat-jdbc'
+	all*.exclude group: 'org.mybatis'
+	all*.exclude group: 'org.mybatis.spring.boot'
 	all*.exclude group: 'org.osgi'
 	all*.exclude group: 'org.springframework', module: 'spring-messaging'
 	all*.exclude group: 'org.springframework.security'
-	all*.exclude group: 'javax.servlet', module: 'com.springsource.javax.servlet'
-	all*.exclude group: 'log4j', module: 'log4j'
 	all*.exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+	all*.exclude group: 'software.amazon.awssdk'
 }
 
 dependencies {
+	// WAR
+	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	
 	// Spring
 	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
@@ -66,36 +78,36 @@ dependencies {
 	implementation "com.fasterxml.jackson.core:jackson-annotations"
 	implementation "com.fasterxml.jackson.core:jackson-core"
 	implementation "com.fasterxml.jackson.core:jackson-databind"
-	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda"
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-cbor'
 	
 	// DB
 	implementation "org.postgresql:postgresql"
 
 	// SSH
     implementation "org.apache.sshd:sshd-mina:${sshdVersion}"
-    implementation "org.bouncycastle:bcpg-jdk15on:${bouncyCastleVersion}"
-    implementation "org.bouncycastle:bcpkix-jdk15on:${bouncyCastleVersion}"
+    implementation "org.bouncycastle:bcpg-jdk18on:${bouncyCastleVersion}"
+    implementation "org.bouncycastle:bcpkix-jdk18on:${bouncyCastleVersion}"
     implementation 'net.i2p.crypto:eddsa:0.3.0'
 
 	// SolarNetwork
-	implementation 'net.solarnetwork.common:net.solarnetwork.common:2.10+'
-	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:2.3+'
-	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.16+'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common:3.31+'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common.web.jakarta:2.0+'
+	implementation 'net.solarnetwork.central:solarnet-common:2.16+'
+	
+	// JCache
+	implementation 'javax.cache:cache-api'
+	implementation 'org.ehcache:ehcache'
 	
     // HTTP
-    implementation 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:1.9'
+    implementation 'org.mitre.dsmiley.httpproxy:smiley-http-proxy-servlet:2.0'
     
     // Testing
-	// Testing
-    testImplementation 	libraries.junit,
-		        		libraries.hamcrest,
-		                libraries.mockito
-	testImplementation 'ch.qos.logback:logback-classic:1.2.3'
+    testImplementation libraries.mockito,
+            libraries.mockitoJupiter
+	testImplementation 'ch.qos.logback:logback-classic:1.5.18'
 }
 
 jar {
-    baseName = 'solarssh'
-    version =  version
     manifest {
         attributes 'Implementation-Version': version
     }
@@ -105,11 +117,15 @@ jar {
     compileJava,
     compileTestJava
 ].each() {
+	it.options.release = 21
     it.options.compilerArgs += [
         "-Xlint:all",
         "-Xlint:-options",
         "-Xlint:-path",
-        "-Xlint:-try"
+		"-Xlint:-serial",
+		"-Xlint:-this-escape",
+        "-Xlint:-try",
+		"-parameters"
     ]
     it.options.encoding = "UTF-8"
     if (rootProject.hasProperty('failOnWarnings') && rootProject.failOnWarnings.toBoolean()) {
@@ -119,7 +135,9 @@ jar {
 
 compileTestJava {
     options.compilerArgs += [
-        "-Xlint:-serial"
+        "-Xlint:-serial",
+        "-Xlint:-static",
+		"-Xlint:-this-escape"
     ]
 }
 
@@ -127,44 +145,44 @@ jar.manifest {
     attributes('Implementation-Title': name,
     'Implementation-Version': version,
     'Built-By': System.getProperty('user.name'),
-    'Built-JDK': System.getProperty('java.version'),
-    'Source-Compatibility': sourceCompatibility,
-    'Target-Compatibility': targetCompatibility)
+    'Built-JDK': System.getProperty('java.version'))
 }
 
 javadoc.options {
     encoding = 'UTF-8'
     use = true
-    links 'https://docs.oracle.com/en/java/javase/17/docs/api/'
-    source = "17"
+    links 'https://docs.oracle.com/en/java/javase/21/docs/api/'
+    source = "21"
+}
+
+allprojects {
+    tasks.withType(Javadoc) {
+        options.addStringOption('Xdoclint:none', '-quiet')
+        options.addBooleanOption('html5', true)
+    }
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    archiveClassifier = 'sources'
 }
 
 eclipse {
-	project {
-		natures 'net.sf.eclipsecs.core.CheckstyleNature'
-		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
-	}
 	jdt {
-		javaRuntimeName 'JavaSE-17'
+		javaRuntimeName 'JavaSE-21'
+		file {
+			withProperties { properties ->
+				// set properties for the file org.eclipse.jdt.core.prefs to enable -parameters for Spring 6
+				properties['org.eclipse.jdt.core.compiler.codegen.inlineJsrBytecode'] = 'enabled'
+				properties['org.eclipse.jdt.core.compiler.codegen.methodParameters'] = 'generate'
+			}
+		}
 	}
-}
-
-// Disable JavaDoc doclint on Java 8. It's annoying.
-if (JavaVersion.current().isJava8Compatible()) {
-    allprojects {
-        tasks.withType(Javadoc) {
-            options.addStringOption('Xdoclint:none', '-quiet')
-        }
-    }
-}
-
-// For jdk10 we must explicitly choose between html4 and html5, otherwise we get a warning
-if (JavaVersion.current().isJava10Compatible()) {
-    allprojects {
-        tasks.withType(Javadoc) {
-            options.addBooleanOption('html5', true)
-        }
-    }
 }
 
 checkstyle {
@@ -184,21 +202,8 @@ checkstyleTest {
     source = fileTree(dir: "src/test", include: "**/*.java")
 }
 
-task javadocJar(type: Jar) {
-    from javadoc
-    classifier = 'javadoc'
-    archiveClassifier = 'javadoc'
-}
-
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier = 'sources'
-    archiveClassifier = 'sources'
-}
-
-// At a test failure, log the stack trace to the console so that we don't
-// have to open the HTML in a browser.
 test {
+	useJUnitPlatform()
     testLogging {
         exceptionFormat = 'full'
         showExceptions true
